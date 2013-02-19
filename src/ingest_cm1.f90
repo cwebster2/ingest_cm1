@@ -14,19 +14,19 @@ module ingest_cm1
    implicit none
 
    ! module variables
+!   private
    character(len=128) :: path
    character(len=64)  :: basename
    integer            :: dtype
    integer            :: nx, ny, nz, nt, nv, dt
    real, dimension(:), allocatable :: x, y, z
-   integer, dimension(:), allocatable :: t
+   integer, dimension(:), allocatable :: times
    integer            :: n2d, reclen
-   integer            :: i,j,k
    integer            :: t0, isopen = 0, ismult = 0
    type variable
       character(len=32) :: varname
       integer           :: levs
-      character(len=54) :: units
+      character(len=64) :: units
    end type variable
    type (variable), dimension(:), allocatable :: vars
 
@@ -35,11 +35,12 @@ contains
 
    integer function open_cm1(dsetpath, dsetbasename, dsettype)
       implicit none
-      character(len=256) :: dset
-      character(len=128), intent(in) :: dsetpath
-      character(len=64), intent(in)  :: dsetbasename
+      character*(*), intent(in) :: dsetpath
+      character*(*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
+      character(len=256) :: dset
       character(len=128) :: tmp
+      integer            :: i,j,k
 
       if (isopen.eq.1) then
          print *,'[ingest_cm1::open_cm1]: Already open, aborting'
@@ -94,9 +95,9 @@ contains
       ! Modify cm1 to write your ctl file this way, or hand edit them 
       read(41,501) nt, t0, dt
       501 format('tdef ',I10,' linear ',11x,I4,1x,I5,'YR')
-      allocate(t(nt))
+      allocate(times(nt))
       do i = 1, nt
-         t(i) = t0 + ((i-1)*dt)
+         times(i) = t0 + ((i-1)*dt)
       end do
       print 500,'T',nt
 
@@ -136,7 +137,7 @@ contains
       deallocate(x)
       deallocate(y)
       deallocate(z)
-      deallocate(t)
+      deallocate(times)
       deallocate(vars)
 
       isopen = 0
@@ -149,7 +150,7 @@ contains
    
    integer function getVarByName(varname)
       implicit none
-      character(len=32), intent(in) :: varname
+      character*(*), intent(in) :: varname
       integer :: i
 
       if (isopen.eq.0) then
@@ -173,9 +174,11 @@ contains
 
    integer function read3DXYSlice(varid, level, slice)
       implicit none
-      integer, intent(in)                 :: varid, level
-      real, dimension(nx,ny), intent(out) :: slice
+      integer, intent(in)    :: varid, level
+      real, dimension(nx,ny) :: slice
       integer :: idx
+
+      !print *,'[ingest_cm1::read3DXYSlice]: ',varid,' ',level
 
       if (isopen.eq.0) then
          print *,'[ingest_cm1::read3DXYSlice]: No dataset open, aborting'
@@ -185,9 +188,9 @@ contains
 
       ! Read Slice
       ! NOTE this offset is for one timestep per file!
-      idx = (n2d+(varid-1-n2d)*(nz)+1)
+      idx = (n2d+(varid-1-n2d)*(nz)+level)
 
-      read(42, rec=i) slice
+      read(42, rec=idx) slice
 
       read3DXYSlice = 1
 
@@ -219,6 +222,9 @@ contains
       datfile = trim(path)//'/'//trim(basename)//'_'//trim(dtime)//'_s.dat'
       print *, ('[ingest_cm1::read3DMultStart]: Opening ',trim(datfile))
       
+      ! TODO: check if time is in times for vailidy
+      !       Make sure file successfully opens!
+
       ! open dat file
       open(42,file=datfile,form='unformatted',access='direct',recl=reclen,status='old')
 
@@ -245,7 +251,9 @@ contains
          return
       end if
 
+      print *,'Before close'
       close(42)
+      print *,'After close'
       print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
       read3DMultStop = 1
       ismult = 0
@@ -254,10 +262,25 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+!   integer function read3DMult(varname, Field4D)
+!      implicit none
+!      character*(*), intent(in) :: varname
+!      real, dimension(nx,ny,nz,1) :: Field4D
+!      real, dimension(nx,ny,nz) :: Field3D
+!      integer :: k,varid,status
+
+!      status = read3dMult(varname, Field3D)
+!      Field4D(:,:,:,1) = Field3d(:,:,:)
+
+!      read3DMult = status
+
+!   end function read3DMult
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    integer function read3DMult(varname, Field3D)
       implicit none
-      character(len=32), intent(in) :: varname
-      real, dimension(nx,ny,nz), intent(out) :: Field3D
+      character*(*), intent(in) :: varname
+      real, dimension(nx,ny,nz) :: Field3D
       integer :: k,varid,status
 
       ! Is the dataset open (has the ctl file been scanned)
@@ -268,7 +291,7 @@ contains
       end if
 
       ! Is the dataset open for reading (is the dat file open)
-      if (isopen.eq.0) then
+      if (ismult.eq.0) then
          print *,'[ingest_cm1::read3DMult]: No multread started, aborting'
          read3DMult = 0
          return
@@ -296,9 +319,9 @@ contains
 
    integer function read3D(varname, time, Field3D)
       implicit none
-      character(len=32), intent(in) :: varname
+      character*(*), intent(in) :: varname
       integer, intent(in) :: time
-      real, dimension(nx,ny,nz), intent(out) :: Field3D
+      real, dimension(nx,ny,nz) :: Field3D
       integer :: status
 
       if (isopen.eq.0) then
@@ -331,5 +354,155 @@ contains
 
       read3D = 1
    end function read3D
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_nx()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_nx]: No dataset open, aborting'
+         cm1_nx = 0
+         return
+      end if
+
+      cm1_nx = nx
+   end function cm1_nx
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_ny()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_ny]: No dataset open, aborting'
+         cm1_ny = 0
+         return
+      end if
+
+      cm1_ny = ny
+   end function cm1_ny
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_nz()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_nz]: No dataset open, aborting'
+         cm1_nz = 0
+         return
+      end if
+
+      cm1_nz = nz
+   end function cm1_nz
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_nt()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_nt]: No dataset open, aborting'
+         cm1_nt = 0
+         return
+      end if
+
+      cm1_nt = nt
+   end function cm1_nt
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_nv()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_nv]: No dataset open, aborting'
+         cm1_nv = 0
+         return
+      end if
+
+      cm1_nv = nv
+   end function cm1_nv
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_dt()
+      implicit none
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_dt]: No dataset open, aborting'
+         cm1_dt = 0
+         return
+      end if
+
+      cm1_dt = dt
+   end function cm1_dt
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_x(cm1x)
+      implicit none
+      real, dimension(nx) :: cm1x
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_x]: No dataset open, aborting'
+         cm1_x = 0
+         return
+      end if
+
+      cm1x(:) = x(:)
+      cm1_x = 1
+   end function cm1_x
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_y(cm1y)
+      implicit none
+      real, dimension(ny) :: cm1y
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_y]: No dataset open, aborting'
+         cm1_y = 0
+         return
+      end if
+
+      cm1y(:) = y(:)
+      cm1_y = 1
+   end function cm1_y
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_z(cm1z)
+      implicit none
+      real, dimension(nz) :: cm1z
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_z]: No dataset open, aborting'
+         cm1_z = 0
+         return
+      end if
+
+      cm1z(:) = z(:)
+      cm1_z = 1
+   end function cm1_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function cm1_t(cm1t)
+      implicit none
+      real, dimension(nx) :: cm1t
+
+      if (isopen.eq.0) then
+         print *,'[ingest_cm1::cm1_t]: No dataset open, aborting'
+         cm1_t = 0
+         return
+      end if
+
+      cm1t(:) = times(:)
+      cm1_t = 1
+   end function cm1_t
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module ingest_cm1

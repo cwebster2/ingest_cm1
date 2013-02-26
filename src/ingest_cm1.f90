@@ -14,7 +14,7 @@ module ingest_cm1
    implicit none
 
    ! module variables
-!   private
+   private
    character(len=128) :: path
    character(len=64)  :: basename
    integer            :: dtype
@@ -30,7 +30,10 @@ module ingest_cm1
    end type variable
    type (variable), dimension(:), allocatable :: vars
 
-
+!   private :: nx,ny,nz,nt,nv,dt,x,y,z
+    public :: open_cm1, getVarByName, read3DMultStart, read3DMult, &
+              read3DMultStop, read3D, cm1_nx, cm1_ny, cm1_nz, cm1_nt,  &
+              cm1_nv, cm1_dt, cm1_x, cm1_y, cm1_z, cm1_t, close_cm1
 contains
 
    integer function open_cm1(dsetpath, dsetbasename, dsettype)
@@ -129,16 +132,16 @@ contains
          close_cm1 = 0
          return
       end if
-      nx = 0
-      ny = 0
-      nz = 0
-      nt = 0
-      nv = 0
       deallocate(x)
       deallocate(y)
       deallocate(z)
       deallocate(times)
       deallocate(vars)
+      nx = 0
+      ny = 0
+      nz = 0
+      nt = 0
+      nv = 0
 
       isopen = 0
       close_cm1 = 1
@@ -251,9 +254,7 @@ contains
          return
       end if
 
-      print *,'Before close'
       close(42)
-      print *,'After close'
       print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
       read3DMultStop = 1
       ismult = 0
@@ -491,7 +492,7 @@ contains
 
    integer function cm1_t(cm1t)
       implicit none
-      real, dimension(nx) :: cm1t
+      real, dimension(nt) :: cm1t
 
       if (isopen.eq.0) then
          print *,'[ingest_cm1::cm1_t]: No dataset open, aborting'

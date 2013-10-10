@@ -19,7 +19,7 @@ program test_cm1
 
    dsetpath = '/home/casey/Research/test'
    dsetbasename = 'curved90-qv14-2'
-   dsettype = 3
+   dsettype = GRADS
 
    status = open_cm1(dsetpath,dsetbasename,dsettype)
 
@@ -90,7 +90,7 @@ program test_cm1
   allocate (dbz(mynx,myny,mynz))
   allocate (dbz2(mynx,myny,mynz,10))
   allocate (dum3(mynx,myny,mynz))
-  status = read3DMultStart(4500)
+  status = readMultStart(4500)
   print *,'status = ',status
   status = read3DMult('dbz', dbz(:,:,2:mynz))
   print *,'status = ',status
@@ -98,7 +98,7 @@ program test_cm1
   dbz2(:,:,2:mynz,1) = dum3(:,:,:)
   print *,'status = ',status
   print *,'Stopping multiread'
-  status = read3DMultStop()
+  status = readMultStop()
   print *,'status = ',status
 
 ! Close dataset

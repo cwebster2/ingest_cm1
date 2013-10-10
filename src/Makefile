@@ -4,7 +4,7 @@
 #
 FC=ifort
 CC=icc
-FFLAGS= -assume byterecl -xHost 
+FFLAGS= -g -warn -traceback -assume byterecl -xHost 
 #FFLAGS= -assume byterecl -g -debug full
 #-diag-enable sc3
 
@@ -14,15 +14,17 @@ FFLAGS= -assume byterecl -xHost
 #  ----------------------------------------------------
 
 INGESTOBJS = ingest_cm1.o 
-TESTOBJS = test_cm1.o
 INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install
 
-test: test_cm1
+test: test_cm1 test_cm1_mpi
 
-test_cm1: $(INGESTLIB) $(TESTOBJS)
-	$(FC) $(TESTOBJS) $(FFLAGS) $(INGESTLIB) -o test_cm1
+test_cm1: $(INGESTLIB) test_cm1.o
+	$(FC) test_cm1.o $(FFLAGS) $(INGESTLIB) -o test_cm1
+
+test_cm1_mpi: $(INGESTLIB) test_cm1_mpi.o
+	$(FC) test_cm1_mpi.o $(FFLAGS) $(INGESTLIB) -o test_cm1_mpi
 
 ingest_cm1_lib: $(INGESTLIB)
 
@@ -43,4 +45,4 @@ install: $(INGESTLIB) test_cm1
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 clean: 
-	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1 *.mod
+	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1 test_cm1_mpi *.mod

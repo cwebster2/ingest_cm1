@@ -254,6 +254,7 @@ contains
             allocate(nodeslice(ni,nj))
             do nf=0, nodex*nodey-1
 
+              nodeslice = 0.0
               read(unit_base+nf, rec=idx) nodeslice
               sj = nf / nodex + 1
               si = nf - (sj-1)*nodex + 1
@@ -277,6 +278,8 @@ contains
                      slice((si-1)*ni+i,(sj-1)*(nj-1)+j) = nodeslice(i,j)
                    end do
                    end do
+                 case default
+                   print *,'[ingest_cm1::read3DXYSlice]: Unsupported MPI grid, something bad happened.'
               end select
 
             end do
@@ -388,6 +391,7 @@ contains
             do fu=0, nodex*nodey-1
                close(unit_base+fu)
             end do
+            print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
             readMultStop = 1
             ismult = 0
 

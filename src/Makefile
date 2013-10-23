@@ -4,7 +4,7 @@
 #
 FC=ifort
 CC=icc
-FFLAGS= -g -warn -traceback -assume byterecl -xHost 
+FFLAGS= -g -warn -stand 08 -traceback -assume byterecl -xHost 
 #FFLAGS= -assume byterecl -g -debug full
 #-diag-enable sc3
 
@@ -18,10 +18,11 @@ INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install
 
-test: test_cm1 test_cm1_mpi
+test: test_cm1 
+#test_cm1_mpi
 
 test_cm1: $(INGESTLIB) test_cm1.o
-	$(FC) test_cm1.o $(FFLAGS) $(INGESTLIB) -o test_cm1
+	$(FC) $(FFLAGS) -o test_cm1 test_cm1.o $(INGESTLIB)
 
 test_cm1_mpi: $(INGESTLIB) test_cm1_mpi.o
 	$(FC) test_cm1_mpi.o $(FFLAGS) $(INGESTLIB) -o test_cm1_mpi

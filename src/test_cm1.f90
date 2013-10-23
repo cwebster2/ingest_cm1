@@ -3,6 +3,7 @@
 program test_cm1
 
    use ingest_cm1
+!   use testing
 
    implicit none
    integer :: status
@@ -17,51 +18,55 @@ program test_cm1
    real, dimension(:), allocatable :: myx, myy, myz, myt
    integer :: mydt, mynx, mynz, myny
 
+   type(cm1)         :: cm1s
+
    dsetpath = '/home/casey/Research/test'
    dsetbasename = 'curved90-qv14-2'
    dsettype = GRADS
 
-   status = open_cm1(dsetpath,dsetbasename,dsettype)
+   !status = test("Open dataset",1, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
+   status = cm1s%open_cm1(dsetpath,dsetbasename,dsettype)
+   print *,'status = ',status
+   call check(status, 1)
 
-   if (status.eq.0) then
-      print *,'Error'
-   else
-      print *,'Success'
-   endif
-
-   status = open_cm1(dsetpath,dsetbasename,dsettype)
-
-   if (status.eq.0) then
-      print *,'Error'
-   else
-      print *,'Success'
-   endif
+   !status = test("Open dataset already open",0, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
+   status = cm1s%open_cm1(dsetpath,dsetbasename,dsettype)
+   print *,'status = ',status
+   call check(status, 0)
 
 ! TEST some stuff
 
-  varid = getVarByName('uinterp') 
-  print *,'Variable uinterp = ',varid
+  varname = 'uinterp'
+  !status = test('Get defined variable:'//trim(varname), 32, cm1s%getVarByName, varname)
+  varid = cm1s%getVarByName('uinterp')
+   call check(varid, 32)
 
   varname = 'qg'
-  varid = getVarByName(varname) 
-  print *,'Variable ',varname,' = ',varid
+  !status =  test('Get defined variable:'//trim(varname), 26, cm1s%getVarByName, varname)
+  varid = cm1s%getVarByName(varname)
+   call check(varid, 26)
 
   varname = 'xyzvort'
-  varid = getVarByName(varname) 
-  print *,'Variable ',varname,' = ',varid
+  !status =  test('Get UNdefined variable:'//trim(varname), 0, cm1s%getVarByName, varname)
+  varid = cm1s%getVarByName(varname)
+   call check(varid, 0)
+
 
   print *,'Getting dimensions of data'
-  mynx = cm1_nx()
+  !mynx = test('NX', 300, cm1s%cm1_nx)
+  mynx = cm1s%cm1_nx()
   allocate(myx(mynx))
-  status = cm1_x(myx)
+  status = cm1s%cm1_x(myx)
 
-  myny = cm1_ny()
+  !myny = test('NY', 300, cm1s%cm1_ny)
+  myny = cm1s%cm1_ny()
   allocate(myy(myny))
-  status = cm1_y(myy)
+  status = cm1s%cm1_y(myy)
 
-  mynz = cm1_nz() + 1
+  !mynz =  test('NZ', 72, cm1s%cm1_nz) + 1
+  mynz = cm1s%cm1_nz() + 1
   allocate(myz(mynz))
-  status = cm1_z(myz(2:mynz))
+  status = cm1s%cm1_z(myz(2:mynz))
   myz(1) = 0.0
 
   !print *,myx
@@ -75,7 +80,7 @@ program test_cm1
   print *, 'Allocating dbz dims=',mynx,myny,mynz
   allocate (dbz(mynx,myny,mynz))
   print *, 'Fetching dbz'
-  status = read3D(varname, 4500, dbz(:,:,2:mynz))
+  status = cm1s%read3D(varname, 4500, dbz(:,:,2:mynz))
   print *,'status = ',status
 
 !  print *, 'Allocating dbz dims=',mynx,myny,mynz,1
@@ -83,27 +88,27 @@ program test_cm1
 !  print *, 'Fetching dbz2 w/ 4D array'
 !  status = read3D(varname, 4500, dbz2(:,:,2:mynz,1))
 !  print *,'status = ',status
-  
+
   !deallocate(dbz,dbz2)
   deallocate(dbz)
   print *,'Reallocating and doing multiread'
   allocate (dbz(mynx,myny,mynz))
   allocate (dbz2(mynx,myny,mynz,10))
   allocate (dum3(mynx,myny,mynz))
-  status = readMultStart(4500)
+  status = cm1s%readMultStart(4500)
   print *,'status = ',status
-  status = read3DMult('dbz', dbz(:,:,2:mynz))
+  status = cm1s%read3DMult('dbz', dbz(:,:,2:mynz))
   print *,'status = ',status
-  status = read3DMult('dbz', dum3)
+  status = cm1s%read3DMult('dbz', dum3)
   dbz2(:,:,2:mynz,1) = dum3(:,:,:)
   print *,'status = ',status
   print *,'Stopping multiread'
-  status = readMultStop()
+  status = cm1s%readMultStop()
   print *,'status = ',status
 
 ! Close dataset
 
-   status = close_cm1()
+   status = cm1s%close_cm1()
 
    if (status.eq.0) then
       print *,'Error'
@@ -111,12 +116,27 @@ program test_cm1
       print *,'Success'
    endif
 
-   status = close_cm1()
+   status = cm1s%close_cm1()
 
    if (status.eq.0) then
       print *,'Error'
    else
       print *,'Success'
    endif
+
+   contains
+
+   subroutine check(val, expected)
+      implicit none
+      integer :: val, expected
+
+      print *,'--------------------------------------------------------'
+      if (val == expected) then
+         print *,'SUCCESS: ', val
+      else
+         print *,'FAILURE: ', val
+      end if
+      print *,'--------------------------------------------------------'
+   end subroutine check
 
 end program test_cm1

@@ -1,9 +1,15 @@
-! module for ingesting cm1 model output.
+!==========================================================================!
+!
+!   Ingest_CM1
+!
+!   
+!     A Fortran 2003 module to access model output by the CM1 cloud model 
+!   by George Bryan.
 !
 ! Formats supported : grads style flat files
+!                       - multi file per time step (MPI)
 !                       - single file per time step
 !                         - filenames by time index
-!                         - filenames by time in seconds
 ! Future formats    : grads style flat files
 !                       - everything in one file
 !                     netcdf / hdf5 files
@@ -15,117 +21,182 @@ module ingest_cm1
 
    ! module variables
    private
-   character(len=128) :: path
-   character(len=64)  :: basename
-   integer            :: dtype
-   integer            :: nx, ny, nz, nt, nv, dt, ni, nj
-   integer            :: nodex, nodey
-   real, dimension(:), allocatable :: x, y, z
-   integer, dimension(:), allocatable :: times
-   integer            :: n2d, reclen, mpireclen
-   integer            :: t0, isopen = 0, ismult = 0
-   character          :: grid
-   type variable
-      character(len=32) :: varname
-      integer           :: levs
-      character(len=64) :: units
-   end type variable
-   type (variable), dimension(:), allocatable :: vars
+   public :: variable, cm1
 
+! Parameters to specify dataset type
    integer, public, parameter :: GRADS = 3
    integer, public, parameter :: GRADSMPI = 4
    integer, public, parameter :: HDF = 5
 
-   integer, parameter :: unit_base = 42
+   type variable
+      character(len=32) :: varname
+      integer           :: levs
+      character(len=64) :: units
+      integer           :: dims
+   end type variable
 
-!   private :: nx,ny,nz,nt,nv,dt,x,y,z
-    public :: open_cm1, getVarByName, readMultStart, read3DMult, read2DMult, &
-              readMultStop, read3D, cm1_nx, cm1_ny, cm1_nz, cm1_nt,  &
-              cm1_nv, cm1_dt, cm1_x, cm1_y, cm1_z, cm1_t, close_cm1, cm1_set_nodes
+!TODO: Split these into multipe types? Or keep single type?
+   type cm1
+      private
+      character(len=128) :: path
+      character(len=64)  :: basename
+      integer            :: dtype
+      integer            :: nx, ny, nz, nt, nv, dt
+      real, dimension(:), allocatable    :: x, y, z
+      integer, dimension(:), allocatable :: times
+      type (variable), dimension(:), allocatable :: vars
+      integer            :: t0
+      logical            :: isopen = .false., ismult = .false.
+
+      ! GRADS stuff
+      integer            :: n2d, reclen
+      character          :: grid
+      integer            :: ctl_unit
+      integer,dimension(:),allocatable :: dat_units
+      integer            :: nunits
+
+      ! GRADSMPI stuff
+      integer            :: ni, nj
+      integer            :: nodex, nodey
+      integer            :: mpireclen
+
+
+      contains
+         private
+
+         procedure, pass(self) :: cm1_set_nodes
+         procedure, pass(self) :: read_ctl
+         procedure, pass(self) :: read3DXYSlice
+         procedure, pass(self) :: check_open
+         procedure, pass(self) :: check_mult
+!TODO: TYPE BOUND PROCEDURE HERE
+         procedure, public ,pass(self) :: open_cm1
+         procedure, public ,pass(self) :: close_cm1
+         procedure, public ,pass(self) :: getVarByName
+         procedure, public ,pass(self) :: readMultStart
+         procedure, public ,pass(self) :: readMultStop
+         procedure, public ,pass(self) :: read3DMult
+         procedure, public ,pass(self) :: read2DMult
+         procedure, public ,pass(self) :: read3D
+         procedure, public ,pass(self) :: cm1_nx
+         procedure, public ,pass(self) :: cm1_ny
+         procedure, public ,pass(self) :: cm1_nz
+         procedure, public ,pass(self) :: cm1_nt
+         procedure, public ,pass(self) :: cm1_nv
+         procedure, public ,pass(self) :: cm1_x
+         procedure, public ,pass(self) :: cm1_y
+         procedure, public ,pass(self) :: cm1_z
+         procedure, public ,pass(self) :: cm1_t
+
+!         final :: close_cm1
+
+
+   end type cm1
+
 contains
 
-   integer function open_cm1(dsetpath, dsetbasename, dsettype, dsetgrid)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function open_cm1(self, dsetpath, dsetbasename, dsettype, dsetgrid, nodex, nodey)
       implicit none
+      class(cm1) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
       character, optional :: dsetgrid
+      integer, optional :: nodex, nodey
 
 
-      if (isopen.eq.1) then
+      if (self%isopen) then
          print *,'[ingest_cm1::open_cm1]: Already open, aborting'
          open_cm1 = 0
          return
       end if
 
-      path = dsetpath
-      basename = dsetbasename
-      dtype = dsettype
+      self%path = dsetpath
+      self%basename = dsetbasename
+      self%dtype = dsettype
 
       if (present(dsetgrid)) then
-        grid = dsetgrid
+        self%grid = dsetgrid
       else
-        grid = 's'
+        self%grid = 's'
       endif
-      print *,'[ingest_cm1::open_cm1]: Grid ',grid,' selected.'
+      print *,'[ingest_cm1::open_cm1]: Grid ', self%grid,' selected.'
 
-      select case (dtype)
-        case (GRADS, GRADSMPI)
+      select case (self%dtype)
+
+        case (GRADS)
           print *,"Reading GRADS control file"
-          open_cm1 = read_ctl()
-          isopen = 1
+          open_cm1 = self%read_ctl()
+          self%nunits = 1
+          allocate(self%dat_units(self%nunits))
+          self%isopen = 1
+
+        case (GRADSMPI)
+          print *,"Reading GRADS control file"
+          open_cm1 = self%read_ctl()
+
+          if ((present(nodex)) .and. (present(nodey))) then
+            self%nunits = self%cm1_set_nodes(nodex,nodey)
+            allocate(self%dat_units(self%nunits))
+          else
+            print *,'[ingest_cm1::open_cm1]: GRADSMPI open requires nodex and nodey parameters'
+            open_cm1 = 0
+            return
+          endif
+          self%isopen = 1
+
         case (HDF)
-          print *,"HDF ingest not implemented"
+          print *,"[ingest_cm1::open_cm1]: HDF ingest not implemented"
           stop
         case default
-          print *,"Unknown dset type"
+          print *,"[ingest_cm1::open_cm1]: Unknown dset type"
           stop
       end select
 
    end function open_cm1
 
-   integer function read_ctl()
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read_ctl(self)
       implicit none
+      class(cm1) :: self
       character(len=256) :: dset
       character(len=128) :: tmp
       integer            :: i,j,k
       real, allocatable, dimension(:,:) :: recltest
 
-      dset = trim(path)//'/'//trim(basename)//'_'//grid//'.ctl'
+      dset = trim(self%path)//'/'//trim(self%basename)//'_'//self%grid//'.ctl'
       print *, ('[ingest_cm1::open_cm1]: Opening ',trim(dset))
-      open(unit=41, file=dset, status='old')
-      read(41,*)
-      read(41,*)
-      read(41,*)
-      read(41,*)
+      open(newunit=self%ctl_unit, file=dset, status='old')
+      read(self%ctl_unit,*)
+      read(self%ctl_unit,*)
+      read(self%ctl_unit,*)
+      read(self%ctl_unit,*)
 
       500 format(' [ingest_cm1::open_cm1]: ... Found ',A1,' dimension with ',i5,' points')
-      read(41,*) tmp, nx  ! for stretched grids only.  detect and calc linear.
-      allocate(x(nx))
-      do i = 1, nx
-         read(41,*) x(i)
+      read(self%ctl_unit,*) tmp, self%nx  ! for stretched grids only.  detect and calc linear.
+      allocate(self%x(self%nx))
+      do i = 1, self%nx
+         read(self%ctl_unit,*) self%x(i)
       end do
-      print 500,'X',nx
+      print 500,'X',self%nx
 
-      read(41,*) tmp, ny  ! for stretched grids only.  detect and calc linear.
-      allocate(y(ny))
-      do j = 1, ny
-         read(41,*) y(j)
+      read(self%ctl_unit,*) tmp, self%ny  ! for stretched grids only.  detect and calc linear.
+      allocate(self%y(self%ny))
+      do j = 1, self%ny
+         read(self%ctl_unit,*) self%y(j)
       end do
-      print 500,'Y',ny
+      print 500,'Y',self%ny
 
-      ! This determines the recl to pass to open()
-      allocate(recltest(nx,ny))
-      inquire(iolength=reclen) recltest
-      deallocate(recltest)
-      print *,'Using record length = ', reclen
-
-      read(41,*) tmp, nz  ! for stretched grids only.  detect and calc linear.
-      allocate(z(nz))
-      do k = 1, nz
-         read(41,*) z(k)
+      read(self%ctl_unit,*) tmp, self%nz  ! for stretched grids only.  detect and calc linear.
+      allocate(self%z(self%nz))
+      do k = 1, self%nz
+         read(self%ctl_unit,*) self%z(k)
       end do
-      print 500,'Z',nz
+      print 500,'Z',self%nz
 
       ! calculate timelevels.  note - supports a specific timeformat
       ! and only an integer dt (minimum timestep 1 s).
@@ -135,59 +206,74 @@ contains
       !       SSSSS is the timestep in seconds
       !
       ! Modify cm1 to write your ctl file this way, or hand edit them
-      read(41,501) nt, t0, dt
+      read(self%ctl_unit,501) self%nt, self%t0, self%dt
       501 format('tdef ',I10,' linear ',11x,I4,1x,I5,'YR')
-      allocate(times(nt))
-      do i = 1, nt
-         times(i) = t0 + ((i-1)*dt)
+      allocate(self%times(self%nt))
+      do i = 1, self%nt
+         self%times(i) = self%t0 + ((i-1)*self%dt)
       end do
-      print 500,'T',nt
+      print 500,'T',self%nt
 
       ! variables
-      read(41,*) tmp, nv
-      allocate(vars(nv))
-      n2d = 0
-      do i = 1,nv
-         read(41,502) vars(i)%varname, vars(i)%levs, vars(i)%units
+      read(self%ctl_unit,*) tmp, self%nv
+      allocate(self%vars(self%nv))
+      self%n2d = 0
+      do i = 1,self%nv
+         read(self%ctl_unit,502) self%vars(i)%varname, self%vars(i)%levs, self%vars(i)%units
          502 format(A10,1x,I5,6x,A)
-         if (vars(i)%levs.eq.0) then
-            n2d = n2d+1
+         if (self%vars(i)%levs.eq.0) then
+            self%n2d = self%n2d+1
          end if
       end do
       503 format(' [ingest_cm1::open_cm1]: ... Found ',i3,' variables')
-      print 503,nv
+      print 503,self%nv
 
-      print *, ('[ingest_cm1::open_cm1]: Closing ',trim(dset))
-      close(41)
+      print *, ('[ingest_cm1::open_cm1]: Closing Grads control file',trim(dset))
+
+      ! This determines the recl to pass to open()
+      allocate(recltest(self%nx,self%ny))
+      inquire(iolength=self%reclen) recltest
+      deallocate(recltest)
+      print *,'[ingest_cm1::open_cm1]: Using record length = ', self%reclen
+
+      close(self%ctl_unit)
       read_ctl = 1
-
-      nodex = 0
-      nodey = 0
 
    end function read_ctl
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function close_cm1()
+   integer function close_cm1(self)
       implicit none
+      class(cm1) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::close_cm1]: No dataset open, aborting'
+      ! Check if the dataset is open
+      if (.not. check_open(self,'close_cm1')) then
          close_cm1 = 0
          return
       end if
-      deallocate(x)
-      deallocate(y)
-      deallocate(z)
-      deallocate(times)
-      deallocate(vars)
-      nx = 0
-      ny = 0
-      nz = 0
-      nt = 0
-      nv = 0
 
-      isopen = 0
+      ! If data files are open, close them
+      select case(self%dtype)
+         case(GRADS,GRADSMPI)
+            if (self%ismult) then
+               close_cm1 = self%readMultStop()
+            end if
+      end select
+
+      deallocate(self%x)
+      deallocate(self%y)
+      deallocate(self%z)
+      deallocate(self%times)
+      deallocate(self%vars)
+      deallocate(self%dat_units)
+      self%nx = 0
+      self%ny = 0
+      self%nz = 0
+      self%nt = 0
+      self%nv = 0
+
+      self%isopen = 0
       close_cm1 = 1
       print *,'[ingest_cm1::close_cm1]: Dataset closed'
 
@@ -195,19 +281,19 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function getVarByName(varname)
+   integer function getVarByName(self,varname)
       implicit none
-      character*(*), intent(in) :: varname
+      class(cm1)                   :: self
+      character(len=*), intent(in) :: varname
       integer :: i
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::getVarByName]: No dataset open, aborting'
+      if (.not. self%check_open('getVarByName')) then
          getVarByName = 0
          return
       end if
 
-      do i = 1, nv
-         if (varname.eq.vars(i)%varname) then
+      do i = 1, self%nv
+         if (varname.eq.self%vars(i)%varname) then
             getVarByName = i
             return
          endif
@@ -219,63 +305,64 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read3DXYSlice(varid, level, slice)
+   integer function read3DXYSlice(self, varid, level, slice)
       implicit none
+      class(cm1)             :: self
       integer, intent(in)    :: varid, level
-      real, dimension(nx,ny) :: slice
+      real, dimension(self%nx,self%ny) :: slice
       integer :: idx
       real, allocatable, dimension(:,:) :: nodeslice
       integer :: nf, si, sj, i, j
 
-      if (isopen.eq.0) then
+      if (.not. self%check_open('read3DXYSlice')) then
          print *,'[ingest_cm1::read3DXYSlice]: No dataset open, aborting'
          read3DXYSlice = 0
          return
       end if
 
-      select case (dtype)
+      select case (self%dtype)
          case (GRADS, GRADSMPI)
             ! NOTE this offset is for one timestep per file!
             ! Calculate record index for 2D or 3D field
-            if (vars(varid)%levs == 0) then ! 2D
+            if (self%vars(varid)%levs == 0) then ! 2D
                idx = varid-1
             else ! 3D
-               idx = (n2d+(varid-1-n2d)*(nz)+level)
+               idx = (self%n2d+(varid-1-self%n2d)*(self%nz)+level)
             endif
       end select
 
-      select case (dtype)
+      select case (self%dtype)
          case (GRADS)
             ! Read Slice
-            read(unit_base, rec=idx) slice
+            read(self%dat_units(1), rec=idx) slice
             read3DXYSlice = 1
 
          case (GRADSMPI)
-            allocate(nodeslice(ni,nj))
-            do nf=0, nodex*nodey-1
+            allocate(nodeslice(self%ni,self%nj))
+            do nf=0, self%nodex*self%nodey-1
 
               nodeslice = 0.0
-              read(unit_base+nf, rec=idx) nodeslice
-              sj = nf / nodex + 1
-              si = nf - (sj-1)*nodex + 1
+              read(self%dat_units(nf+1), rec=idx) nodeslice
+              sj = nf / self%nodex + 1
+              si = nf - (sj-1)*self%nodex + 1
 
-              select case(grid)
+              select case(self%grid)
                  case ('s', 'w')
-                   do j=1,nj
-                   do i=1,ni
-                     slice((si-1)*ni+i,(sj-1)*nj+j) = nodeslice(i,j)
+                   do j=1,self%nj
+                   do i=1,self%ni
+                     slice((si-1)*self%ni+i,(sj-1)*self%nj+j) = nodeslice(i,j)
                    end do
                    end do
                  case ('u')
-                   do j=1,nj
-                   do i=1,ni
-                     slice((si-1)*(ni-1)+i,(sj-1)*nj+j) = nodeslice(i,j)
+                   do j=1,self%nj
+                   do i=1,self%ni
+                     slice((si-1)*(self%ni-1)+i,(sj-1)*self%nj+j) = nodeslice(i,j)
                    end do
                    end do
                  case ('v')
-                   do j=1,nj
-                   do i=1,ni
-                     slice((si-1)*ni+i,(sj-1)*(nj-1)+j) = nodeslice(i,j)
+                   do j=1,self%nj
+                   do i=1,self%ni
+                     slice((si-1)*self%ni+i,(sj-1)*(self%nj-1)+j) = nodeslice(i,j)
                    end do
                    end do
                  case default
@@ -297,63 +384,63 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStart(time)
+   integer function readMultStart(self,time)
       implicit none
+      class(cm1)          :: self
       integer, intent(in) :: time
       character(len=6) :: dtime
       character(len=256) :: datfile
       integer :: fu
       character(len=6) :: node
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::read3DMultStart]: No dataset open, aborting'
+      if (.not. self%check_open('read3DMultStart')) then
          readMultStart = 0
          return
       end if
 
-      if (ismult.eq.1) then
+      if (self%ismult) then
          print *,'[ingest_cm1::read3DMultStart]: Multiread already started, aborting'
          readMultStart = 0
          return
       end if
 
       505 format(I6.6)
-      select case (dtype)
+      select case (self%dtype)
          case (GRADS)
             ! filename?
             write(dtime,505) time
-            datfile = trim(path)//'/'//trim(basename)//'_'//trim(dtime)//'_'//grid//'.dat'
+            datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(dtime)//'_'//self%grid//'.dat'
             print *, ('[ingest_cm1::read3DMultStart]: Opening ',trim(datfile))
 
             ! TODO: check if time is in times for vailidy
             !       Make sure file successfully opens!
 
             ! open dat file
-            open(unit_base,file=datfile,form='unformatted',access='direct',recl=reclen,status='old')
+            open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
 
             print *,'[ingest_cm1::read3DMultStart]: Multiread started for time ',time
             readMultStart = 1
-            ismult = 1
+            self%ismult = .true.
 
          case (GRADSMPI)
-            if (nodex == 0 .or. nodey == 0) then
+            if (self%nodex == 0 .or. self%nodey == 0) then
                print *,'[ingest_cm1::read3DMultStart]: Need to set nodex and nodey'
                readMultStart = 0
-               ismult = 0
+               self%ismult = .true.
                return
             endif
             write(dtime,505) time
-            do fu=0, nodex*nodey-1
+            do fu=0, self%nodex*self%nodey-1
                write(node,505) fu
-               datfile = trim(path)//'/'//trim(basename)//'_'//trim(node)//'_'//trim(dtime)//'_'//grid//'.dat'
+               datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(node)//'_'//trim(dtime)//'_'//self%grid//'.dat'
                print *, ('[ingest_cm1::read3DMultStart]: Opening ',trim(datfile))
 
                ! open dat file
-               open(unit_base+fu,file=datfile,form='unformatted',access='direct',recl=mpireclen,status='old')
+               open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
             end do
             print *,'[ingest_cm1::read3DMultStart]: Multiread started for time ',time
             readMultStart = 1
-            ismult = 1
+            self%ismult = .true.
 
          case (HDF)
             print*,'Not implemented'
@@ -364,36 +451,30 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStop()
+   integer function readMultStop(self)
       implicit none
+      class(cm1) :: self
       integer :: fu
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::read3DMultStop]: No dataset open, aborting'
+      if ((.not. self%check_open('readMultStop')) .or. (.not. self%check_mult('readMultStop'))) then
          readMultStop = 0
          return
       end if
 
-      if (ismult.eq.0) then
-         print *,'[ingest_cm1::read3DMultStop]: No multiread started, aborting'
-         readMultStop = 0
-         return
-      end if
-
-      select case (dtype)
+      select case (self%dtype)
          case (GRADS)
-            close(unit_base)
+            close(self%dat_units(1))
             print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
             readMultStop = 1
-            ismult = 0
+            self%ismult = .false.
 
          case (GRADSMPI)
-            do fu=0, nodex*nodey-1
-               close(unit_base+fu)
+            do fu=1, self%nodex*self%nodey
+               close(self%dat_units(fu))
             end do
             print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
             readMultStop = 1
-            ismult = 0
+            self%ismult = .false.
 
          case (HDF)
             print*,'Not implemented'
@@ -404,24 +485,20 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read2DMult(varname, Field2D)
+   integer function read2DMult(self, varname, Field2D)
       implicit none
+      class(cm1), intent(in) :: self
       character(len=*), intent(in) :: varname
-      real, dimension(nx,ny) :: Field2D
+      real, dimension(self%nx,self%ny) :: Field2D
       integer :: varid,status
 
-      if (.not. check_open('read2DMult')) then
-         read2DMult = 0
-         return
-      end if
-
-      if (.not. check_mult('read2DMult')) then
+      if ((.not. self%check_open('read2DMult')) .or. (.not. self%check_mult('read2DMult'))) then
          read2DMult = 0
          return
       end if
 
       ! Does the variable exist in this dataset?
-      varid = getVarByName(varname)
+      varid = self%getVarByName(varname)
       if (varid.eq.0) then
          print *,'[ingest_cm1::read2DMult]: variable not found: ',trim(varname)
          read2DMult = 0
@@ -430,7 +507,7 @@ contains
 
       print *,'[ingest_cm1::read2DMult]: Reading: ',trim(varname)
       ! Read the variable from the dataset
-      status = read3DXYSlice(varid, 0, Field2D(:,:))
+      status = self%read3DXYSlice(varid, 0, Field2D(:,:))
 
       read2DMult = 1
 
@@ -453,28 +530,22 @@ contains
 !   end function read3DMult
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   integer function read3DMult(varname, Field3D)
+   integer function read3DMult(self, varname, Field3D)
       implicit none
-      character*(*), intent(in) :: varname
-      real, dimension(nx,ny,nz) :: Field3D
+      class(cm1), intent(in) :: self
+      character(len=*), intent(in) :: varname
+      real, dimension(self%nx,self%ny,self%nz) :: Field3D
       integer :: k,varid,status
 
       ! Is the dataset open (has the ctl file been scanned)
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::read3DMult]: No dataset open, aborting'
-         read3DMult = 0
-         return
-      end if
-
       ! Is the dataset open for reading (is the dat file open)
-      if (ismult.eq.0) then
-         print *,'[ingest_cm1::read3DMult]: No multread started, aborting'
+      if ((.not. self%check_open('read3DMult')) .or. (.not. self%check_mult('read3DMult'))) then
          read3DMult = 0
          return
       end if
 
       ! Does the variable exist in this dataset?
-      varid = getVarByName(varname)
+      varid = self%getVarByName(varname)
       if (varid.eq.0) then
          print *,'[ingest_cm1::read3DMult]: variable not found: ',trim(varname)
          read3DMult = 0
@@ -483,8 +554,8 @@ contains
 
       print *,'[ingest_cm1::read3DMult]: Reading: ',trim(varname)
       ! Read the variable from the dataset
-      do k = 1,nz
-         status = read3DXYSlice(varid, k, Field3D(:,:,k))
+      do k = 1,self%nz
+         status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
       end do
 
       read3DMult = 1
@@ -493,35 +564,35 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read3D(varname, time, Field3D)
+   integer function read3D(self, varname, time, Field3D)
       implicit none
-      character*(*), intent(in) :: varname
+      class(cm1), intent(in)   :: self
+      character(len=*), intent(in) :: varname
       integer, intent(in) :: time
-      real, dimension(nx,ny,nz) :: Field3D
+      real, dimension(self%nx,self%ny,self%nz) :: Field3D
       integer :: status
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::read3D]: No dataset open, aborting'
+      if (.not. self%check_open('read3D')) then
          read3D = 0
          return
       end if
 
-      status = readMultStart(time)
+      status = self%readMultStart(time)
       if (status.eq.0) then
          print *,'[ingest_cm1:read3D]: data open failure, aborting'
          read3D = 0
          return
       endif
 
-      status = read3DMult(varname, Field3D)
+      status = self%read3DMult(varname, Field3D)
       if (status.eq.0) then
          print *,'[ingest_cm1:read3D]: data read failure, aborting'
          read3D = 0
-         status = readMultStop()
+         status = self%readMultStop()
          return
       endif
 
-      status = readMultStop()
+      status = self%readMultStop()
       if (status.eq.0) then
          print *,'[ingest_cm1:read3D]: data close failure, aborting'
          read3D = 0
@@ -533,208 +604,209 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_nx()
+   integer function cm1_nx(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_nx]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_nx')) then
          cm1_nx = 0
          return
       end if
 
-      cm1_nx = nx
+      cm1_nx = self%nx
    end function cm1_nx
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_set_nodes(mpix, mpiy)
+   integer function cm1_set_nodes(self, mpix, mpiy)
       implicit none
+      class(cm1) :: self
       integer, intent(in) :: mpix, mpiy
       real, allocatable, dimension(:,:) :: recltest
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_set_nodes]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_set_nodes')) then
          cm1_set_nodes = 0
          return
       end if
 
-      if (dtype /= GRADSMPI) then
+      if (self%dtype /= GRADSMPI) then
          print *,'[ingest_cm1::cm1_set_nodes]: Dataset not of MPI type, aborting'
          cm1_set_nodes = 0
          return
       end if
 
-      nodex = mpix
-      nodey = mpiy
-      print *,'[ingest_cm1::cm1_set_nodes]: nodex=',nodex,' nodey=',nodey
+      self%nodex = mpix
+      self%nodey = mpiy
+      print *,'[ingest_cm1::cm1_set_nodes]: nodex=',self%nodex,' nodey=',self%nodey
 
-      select case(grid)
+      select case(self%grid)
         case ('s','w')
-           ni = nx/nodex
-           nj = ny/nodey
+           self%ni = self%nx/self%nodex
+           self%nj = self%ny/self%nodey
         case ('u')
-           ni = 1+(nx-1)/nodex
-           nj = ny/nodey
+           self%ni = 1+(self%nx-1)/self%nodex
+           self%nj = self%ny/self%nodey
         case ('v')
-           ni = nx/nodex
-           nj = 1+(ny-1)/nodey
+           self%ni = self%nx/self%nodex
+           self%nj = 1+(self%ny-1)/self%nodey
         case default
            print *,'Unsupported grid'
            stop
       end select
-      print *,'[ingest_cm1::cm1_set_nodes]: ni=',ni,' nj=',nj
+      print *,'[ingest_cm1::cm1_set_nodes]: ni=',self%ni,' nj=',self%nj
 
-      allocate(recltest(ni,nj))
-      inquire(iolength=mpireclen) recltest
+      allocate(recltest(self%ni,self%nj))
+      inquire(iolength=self%mpireclen) recltest
       deallocate(recltest)
-      print *,'[ingest_cm1::cm1_set_nodes]: mpi recl = ',mpireclen
+      print *,'[ingest_cm1::cm1_set_nodes]: mpi recl = ',self%mpireclen
 
-      cm1_set_nodes = nodex*nodey
+      cm1_set_nodes = self%nodex*self%nodey
    end function cm1_set_nodes
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_ny()
+   integer function cm1_ny(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_ny]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_ny')) then
          cm1_ny = 0
          return
       end if
 
-      cm1_ny = ny
+      cm1_ny = self%ny
    end function cm1_ny
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_nz()
+   integer function cm1_nz(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_nz]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_nz')) then
          cm1_nz = 0
          return
       end if
 
-      cm1_nz = nz
+      cm1_nz = self%nz
    end function cm1_nz
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_nt()
+   integer function cm1_nt(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_nt]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_nt')) then
          cm1_nt = 0
          return
       end if
 
-      cm1_nt = nt
+      cm1_nt = self%nt
    end function cm1_nt
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_nv()
+   integer function cm1_nv(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_nv]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_nv')) then
          cm1_nv = 0
          return
       end if
 
-      cm1_nv = nv
+      cm1_nv = self%nv
    end function cm1_nv
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_dt()
+   integer function cm1_dt(self)
       implicit none
+      class(cm1),intent(in) :: self
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_dt]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_dt')) then
          cm1_dt = 0
          return
       end if
 
-      cm1_dt = dt
+      cm1_dt = self%dt
    end function cm1_dt
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_x(cm1x)
+   integer function cm1_x(self, cm1x)
       implicit none
-      real, dimension(nx) :: cm1x
+      class(cm1),intent(in) :: self
+      real, dimension(self%nx) :: cm1x
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_x]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_x')) then
          cm1_x = 0
          return
       end if
 
-      cm1x(:) = x(:)
+      cm1x(:) = self%x(:)
       cm1_x = 1
    end function cm1_x
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_y(cm1y)
+   integer function cm1_y(self, cm1y)
       implicit none
-      real, dimension(ny) :: cm1y
+      class(cm1),intent(in) :: self
+      real, dimension(self%ny) :: cm1y
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_y]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_x')) then
          cm1_y = 0
          return
       end if
 
-      cm1y(:) = y(:)
+      cm1y(:) = self%y(:)
       cm1_y = 1
    end function cm1_y
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_z(cm1z)
+   integer function cm1_z(self, cm1z)
       implicit none
-      real, dimension(nz) :: cm1z
+      class(cm1),intent(in) :: self
+      real, dimension(self%nz) :: cm1z
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_z]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_x')) then
          cm1_z = 0
          return
       end if
 
-      cm1z(:) = z(:)
+      cm1z(:) = self%z(:)
       cm1_z = 1
    end function cm1_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function cm1_t(cm1t)
+   integer function cm1_t(self, cm1t)
       implicit none
-      real, dimension(nt) :: cm1t
+      class(cm1),intent(in) :: self
+      real, dimension(self%nt) :: cm1t
 
-      if (isopen.eq.0) then
-         print *,'[ingest_cm1::cm1_t]: No dataset open, aborting'
+      if (.not. self%check_open('cm1_x')) then
          cm1_t = 0
          return
       end if
 
-      cm1t(:) = times(:)
+      cm1t(:) = self%times(:)
       cm1_t = 1
    end function cm1_t
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   logical function check_open(funcname)
+   logical function check_open(self, funcname)
       use, intrinsic :: iso_fortran_env, only: error_unit
+      class(cm1),intent(in) :: self
       character(len=*), intent(in) :: funcname
 
       1501 format ('[ingest_cm1::',A,']: No dataset open, aborting')
       ! Is the dataset open (has the ctl file been scanned)
-      if (isopen.eq.0) then
+      if (.not. self%isopen) then
          write (error_unit,1501) trim(funcname)
          check_open = .false.
          return
@@ -745,13 +817,14 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   logical function check_mult(funcname)
+   logical function check_mult(self, funcname)
       use, intrinsic :: iso_fortran_env, only: error_unit
+      class(cm1),intent(in) :: self
       character(len=*), intent(in) :: funcname
 
       1502 format ('[ingest_cm1::',A,']: No multread started, aborting')
       ! Is the dataset open for reading (is the dat file open)
-      if (ismult.eq.0) then
+      if (.not. self%ismult) then
          write (error_unit,1502) trim(funcname)
          check_mult = .false.
          return

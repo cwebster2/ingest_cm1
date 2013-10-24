@@ -18,8 +18,7 @@ INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install
 
-test: test_cm1 
-#test_cm1_mpi
+test: test_cm1 test_cm1_mpi
 
 test_cm1: $(INGESTLIB) test_cm1.o
 	$(FC) $(FFLAGS) -o test_cm1 test_cm1.o $(INGESTLIB)

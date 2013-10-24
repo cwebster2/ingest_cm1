@@ -1,18 +1,25 @@
 !==========================================================================!
-!
-!   Ingest_CM1
-!
-!   
-!     A Fortran 2003 module to access model output by the CM1 cloud model 
-!   by George Bryan.
-!
-! Formats supported : grads style flat files
-!                       - multi file per time step (MPI)
-!                       - single file per time step
-!                         - filenames by time index
-! Future formats    : grads style flat files
-!                       - everything in one file
-!                     netcdf / hdf5 files
+!                                                                          !
+!   Ingest_CM1                                                             !
+!                                                                          !
+!                                                                          !
+!   A Fortran 2003 module to access model output by the CM1 cloud model    !
+!   by George Bryan.                                                       !
+!                                                                          !
+!   Formats supported : grads style flat files                             !
+!                       - multi file per time step (MPI)                   !
+!                       - single file per time step                        !
+!                                                                          !
+!                       Requirement: T dimension values must conincide     !
+!                                    with filenames.                       !
+!                                                                          !
+!   Future formats    : grads style flat files                             !
+!                       - all timesteps in one file                        !
+!                                                                          !
+!                       netcdf / hdf5 files                                !
+!                                                                          !
+!==========================================================================!
+
 
 
 module ingest_cm1
@@ -69,6 +76,7 @@ module ingest_cm1
          procedure, pass(self) :: read3DXYSlice
          procedure, pass(self) :: check_open
          procedure, pass(self) :: check_mult
+         procedure, pass(self) :: cm1log
 !TODO: TYPE BOUND PROCEDURE HERE
          procedure, public ,pass(self) :: open_cm1
          procedure, public ,pass(self) :: close_cm1
@@ -93,22 +101,27 @@ module ingest_cm1
 
    end type cm1
 
+   !for logging
+   integer, parameter :: LOG_ERROR = 1001
+   integer, parameter :: LOG_WARN  = 1002
+   integer, parameter :: LOG_INFO  = 1003
+   integer, parameter :: LOG_MSG   = 1004
+
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function open_cm1(self, dsetpath, dsetbasename, dsettype, dsetgrid, nodex, nodey)
+   integer function open_cm1(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey)
       implicit none
       class(cm1) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
-      character, optional :: dsetgrid
+      character, optional :: grid
       integer, optional :: nodex, nodey
 
-
       if (self%isopen) then
-         print *,'[ingest_cm1::open_cm1]: Already open, aborting'
+         call cm1log(self, LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
       end if
@@ -117,41 +130,46 @@ contains
       self%basename = dsetbasename
       self%dtype = dsettype
 
-      if (present(dsetgrid)) then
-        self%grid = dsetgrid
+      if (present(grid)) then
+        self%grid = grid
       else
         self%grid = 's'
       endif
-      print *,'[ingest_cm1::open_cm1]: Grid ', self%grid,' selected.'
+      call cm1log(self, LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
       select case (self%dtype)
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         case (GRADS)
-          print *,"Reading GRADS control file"
+          call cm1log(self, LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
           open_cm1 = self%read_ctl()
           self%nunits = 1
           allocate(self%dat_units(self%nunits))
           self%isopen = 1
 
-        case (GRADSMPI)
-          print *,"Reading GRADS control file"
-          open_cm1 = self%read_ctl()
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-          if ((present(nodex)) .and. (present(nodey))) then
-            self%nunits = self%cm1_set_nodes(nodex,nodey)
-            allocate(self%dat_units(self%nunits))
-          else
-            print *,'[ingest_cm1::open_cm1]: GRADSMPI open requires nodex and nodey parameters'
+        case (GRADSMPI)
+          if ((.not.present(nodex)) .or. (.not.present(nodey))) then
+            call cm1log(self, LOG_ERROR, 'open_cm1', 'GRADSMPI open requires nodex and nodey parameters')
             open_cm1 = 0
             return
           endif
+
+          call cm1log(self, LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+          open_cm1 = self%read_ctl()
+          self%nunits = self%cm1_set_nodes(nodex,nodey)
+          allocate(self%dat_units(self%nunits))
           self%isopen = 1
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         case (HDF)
-          print *,"[ingest_cm1::open_cm1]: HDF ingest not implemented"
+          call cm1log(self, LOG_ERROR, 'open_cm1', 'HDF ingest not implemented.')
           stop
         case default
-          print *,"[ingest_cm1::open_cm1]: Unknown dset type"
+          call cm1log(self, LOG_ERROR, 'open_cm1', 'unknown dset type.')
           stop
       end select
 
@@ -393,13 +411,15 @@ contains
       integer :: fu
       character(len=6) :: node
 
+      1001 format('[ingest_cm1::readMultStart]: ',A,A,A,A,A)
+
       if (.not. self%check_open('read3DMultStart')) then
          readMultStart = 0
          return
       end if
 
       if (self%ismult) then
-         print *,'[ingest_cm1::read3DMultStart]: Multiread already started, aborting'
+         call cm1log(self, LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
          readMultStart = 0
          return
       end if
@@ -426,14 +446,14 @@ contains
             if (self%nodex == 0 .or. self%nodey == 0) then
                print *,'[ingest_cm1::read3DMultStart]: Need to set nodex and nodey'
                readMultStart = 0
-               self%ismult = .true.
+               self%ismult = .false.
                return
             endif
             write(dtime,505) time
             do fu=0, self%nodex*self%nodey-1
                write(node,505) fu
                datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(node)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-               print *, ('[ingest_cm1::read3DMultStart]: Opening ',trim(datfile))
+               call cm1log(self, LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
 
                ! open dat file
                open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
@@ -624,10 +644,10 @@ contains
       integer, intent(in) :: mpix, mpiy
       real, allocatable, dimension(:,:) :: recltest
 
-      if (.not. self%check_open('cm1_set_nodes')) then
-         cm1_set_nodes = 0
-         return
-      end if
+!      if (.not. self%check_open('cm1_set_nodes')) then
+!         cm1_set_nodes = 0
+!         return
+!      end if
 
       if (self%dtype /= GRADSMPI) then
          print *,'[ingest_cm1::cm1_set_nodes]: Dataset not of MPI type, aborting'
@@ -804,10 +824,9 @@ contains
       class(cm1),intent(in) :: self
       character(len=*), intent(in) :: funcname
 
-      1501 format ('[ingest_cm1::',A,']: No dataset open, aborting')
       ! Is the dataset open (has the ctl file been scanned)
       if (.not. self%isopen) then
-         write (error_unit,1501) trim(funcname)
+         call cm1log(self, LOG_ERROR, funcname, 'No dataset open, aborting')
          check_open = .false.
          return
       end if
@@ -822,15 +841,60 @@ contains
       class(cm1),intent(in) :: self
       character(len=*), intent(in) :: funcname
 
-      1502 format ('[ingest_cm1::',A,']: No multread started, aborting')
       ! Is the dataset open for reading (is the dat file open)
       if (.not. self%ismult) then
-         write (error_unit,1502) trim(funcname)
+         call cm1log(self, LOG_ERROR, funcname, 'No multiread started, aborting')
          check_mult = .false.
          return
       end if
       check_mult = .true.
 
    end function check_mult
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   subroutine cm1log(self, loglevel, funcname, message)
+      use, intrinsic :: iso_fortran_env, only: output_unit, error_unit
+      class(cm1), intent(in) :: self
+      integer, intent(in) :: loglevel
+      character(len=*), intent(in) :: funcname, message
+
+      character(len=6) :: proto
+
+      1001 format('[ingestcm1',3(':',A),']: Error: ',A)
+      1002 format('[ingestcm1',3(':',A),']: Warning: ',A)
+      1003 format('[ingestcm1',3(':',A),']: Info: ',A)
+      1004 format('[ingestcm1',3(':',A),']: ',A)
+
+      select case (self%dtype)
+
+         case (GRADS)
+            proto = 'GRADS'
+
+         case (GRADSMPI)
+            proto = 'GRMPI'
+
+         case default
+            proto = 'X'
+
+      end select
+
+      select case (loglevel)
+
+         case (LOG_ERROR)
+            write(error_unit,1001) trim(proto), self%grid, funcname, message
+
+         case (LOG_WARN)
+            write(error_unit,1002) trim(proto), self%grid, funcname, message
+
+         case (LOG_INFO)
+            write(error_unit,1003) trim(proto), self%grid, funcname, message
+
+         case (LOG_MSG)
+            write(output_unit,1004) trim(proto), self%grid, funcname, message
+
+      end select
+
+   end subroutine
 
 end module ingest_cm1

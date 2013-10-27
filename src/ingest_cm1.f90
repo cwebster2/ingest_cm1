@@ -182,39 +182,42 @@ contains
       implicit none
       class(cm1) :: self
       character(len=256) :: dset
-      character(len=128) :: tmp
+      character(len=128) :: tmp, output
       integer            :: i,j,k
       real, allocatable, dimension(:,:) :: recltest
 
       dset = trim(self%path)//'/'//trim(self%basename)//'_'//self%grid//'.ctl'
-      print *, ('[ingest_cm1::open_cm1]: Opening ',trim(dset))
+      call cm1log(self, LOG_MSG, 'read_ctl', 'Opening: '//trim(dset))
       open(newunit=self%ctl_unit, file=dset, status='old')
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)
 
-      500 format(' [ingest_cm1::open_cm1]: ... Found ',A1,' dimension with ',i5,' points')
+      500 format('... Found ',A1,' dimension with ',i5,' points')
       read(self%ctl_unit,*) tmp, self%nx  ! for stretched grids only.  detect and calc linear.
       allocate(self%x(self%nx))
       do i = 1, self%nx
          read(self%ctl_unit,*) self%x(i)
       end do
-      print 500,'X',self%nx
+      write (output,500) 'X',self%nx
+      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%ny  ! for stretched grids only.  detect and calc linear.
       allocate(self%y(self%ny))
       do j = 1, self%ny
          read(self%ctl_unit,*) self%y(j)
       end do
-      print 500,'Y',self%ny
+      write (output,500) 'Y',self%ny
+      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%nz  ! for stretched grids only.  detect and calc linear.
       allocate(self%z(self%nz))
       do k = 1, self%nz
          read(self%ctl_unit,*) self%z(k)
       end do
-      print 500,'Z',self%nz
+      write (output,500) 'Z',self%nz
+      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
 
       ! calculate timelevels.  note - supports a specific timeformat
       ! and only an integer dt (minimum timestep 1 s).
@@ -230,7 +233,8 @@ contains
       do i = 1, self%nt
          self%times(i) = self%t0 + ((i-1)*self%dt)
       end do
-      print 500,'T',self%nt
+      write (output,500) 'T',self%nt
+      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
 
       ! variables
       read(self%ctl_unit,*) tmp, self%nv
@@ -243,17 +247,20 @@ contains
             self%n2d = self%n2d+1
          end if
       end do
-      503 format(' [ingest_cm1::open_cm1]: ... Found ',i3,' variables')
-      print 503,self%nv
+      503 format('... Found ',i3,' variables')
+      write (output,503) self%nv
+      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
 
-      print *, ('[ingest_cm1::open_cm1]: Closing Grads control file',trim(dset))
 
       ! This determines the recl to pass to open()
       allocate(recltest(self%nx,self%ny))
       inquire(iolength=self%reclen) recltest
       deallocate(recltest)
-      print *,'[ingest_cm1::open_cm1]: Using record length = ', self%reclen
+      504 format('... Using record length = ', I10)
+      write (output,504) self%reclen
+      call cm1log(self, LOG_INFO, 'read_ctl', trim(output))
 
+      call cm1log(self, LOG_MSG, 'read_ctl', 'Closing Grads control file: '//trim(dset))
       close(self%ctl_unit)
       read_ctl = 1
 
@@ -293,7 +300,7 @@ contains
 
       self%isopen = 0
       close_cm1 = 1
-      print *,'[ingest_cm1::close_cm1]: Dataset closed'
+      call cm1log(self, LOG_MSG, 'close_cm1', 'Dataset closed:')
 
    end function
 
@@ -333,7 +340,7 @@ contains
       integer :: nf, si, sj, i, j
 
       if (.not. self%check_open('read3DXYSlice')) then
-         print *,'[ingest_cm1::read3DXYSlice]: No dataset open, aborting'
+         call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
          read3DXYSlice = 0
          return
       end if
@@ -384,7 +391,7 @@ contains
                    end do
                    end do
                  case default
-                   print *,'[ingest_cm1::read3DXYSlice]: Unsupported MPI grid, something bad happened.'
+                   call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'Unsupported MPI grid, something bad happened.')
               end select
 
             end do
@@ -392,7 +399,7 @@ contains
             read3DXYSlice = 1
 
          case (HDF)
-            print*,'Not implemented'
+            call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'Unimplmeneted.')
 
       end select
 
@@ -411,8 +418,6 @@ contains
       integer :: fu
       character(len=6) :: node
 
-      1001 format('[ingest_cm1::readMultStart]: ',A,A,A,A,A)
-
       if (.not. self%check_open('read3DMultStart')) then
          readMultStart = 0
          return
@@ -430,7 +435,7 @@ contains
             ! filename?
             write(dtime,505) time
             datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-            print *, ('[ingest_cm1::read3DMultStart]: Opening ',trim(datfile))
+            call cm1log(self, LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
 
             ! TODO: check if time is in times for vailidy
             !       Make sure file successfully opens!
@@ -438,13 +443,13 @@ contains
             ! open dat file
             open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
 
-            print *,'[ingest_cm1::read3DMultStart]: Multiread started for time ',time
+            call cm1log(self, LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
             readMultStart = 1
             self%ismult = .true.
 
          case (GRADSMPI)
             if (self%nodex == 0 .or. self%nodey == 0) then
-               print *,'[ingest_cm1::read3DMultStart]: Need to set nodex and nodey'
+               call cm1log(self, LOG_WARN, 'read3DMultStart', 'Need to set nodex and nodey')
                readMultStart = 0
                self%ismult = .false.
                return
@@ -458,12 +463,12 @@ contains
                ! open dat file
                open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
             end do
-            print *,'[ingest_cm1::read3DMultStart]: Multiread started for time ',time
+            call cm1log(self, LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
             readMultStart = 1
             self%ismult = .true.
 
          case (HDF)
-            print*,'Not implemented'
+            call cm1log(self, LOG_ERROR, 'read3DMultStart', 'Not implemented.')
 
       end select
 
@@ -484,7 +489,7 @@ contains
       select case (self%dtype)
          case (GRADS)
             close(self%dat_units(1))
-            print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
+            call cm1log(self, LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
             readMultStop = 1
             self%ismult = .false.
 
@@ -492,12 +497,12 @@ contains
             do fu=1, self%nodex*self%nodey
                close(self%dat_units(fu))
             end do
-            print *,'[ingest_cm1::read3DMultStop]: Multiread stopped'
+            call cm1log(self, LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
             readMultStop = 1
             self%ismult = .false.
 
          case (HDF)
-            print*,'Not implemented'
+            call cm1log(self, LOG_ERROR, 'read3DMultStop', 'Not implemented.')
 
       end select
 
@@ -520,12 +525,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         print *,'[ingest_cm1::read2DMult]: variable not found: ',trim(varname)
+         call cm1log(self, LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
          read2DMult = 0
          return
       end if
 
-      print *,'[ingest_cm1::read2DMult]: Reading: ',trim(varname)
+      call cm1log(self, LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       status = self%read3DXYSlice(varid, 0, Field2D(:,:))
 
@@ -567,12 +572,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         print *,'[ingest_cm1::read3DMult]: variable not found: ',trim(varname)
+         call cm1log(self, LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
          read3DMult = 0
          return
       end if
 
-      print *,'[ingest_cm1::read3DMult]: Reading: ',trim(varname)
+      call cm1log(self, LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       do k = 1,self%nz
          status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
@@ -599,14 +604,14 @@ contains
 
       status = self%readMultStart(time)
       if (status.eq.0) then
-         print *,'[ingest_cm1:read3D]: data open failure, aborting'
+         call cm1log(self, LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
          read3D = 0
          return
       endif
 
       status = self%read3DMult(varname, Field3D)
       if (status.eq.0) then
-         print *,'[ingest_cm1:read3D]: data read failure, aborting'
+         call cm1log(self, LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
          read3D = 0
          status = self%readMultStop()
          return
@@ -614,7 +619,7 @@ contains
 
       status = self%readMultStop()
       if (status.eq.0) then
-         print *,'[ingest_cm1:read3D]: data close failure, aborting'
+         call cm1log(self, LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
          read3D = 0
          return
       endif
@@ -643,21 +648,28 @@ contains
       class(cm1) :: self
       integer, intent(in) :: mpix, mpiy
       real, allocatable, dimension(:,:) :: recltest
+      character(len=128) :: output
 
+!      Don't check open because this is now called automatically before the open flag is set.
 !      if (.not. self%check_open('cm1_set_nodes')) then
 !         cm1_set_nodes = 0
 !         return
 !      end if
 
+      101 format('nodex= ',I45,', nodey= ',I5)
+      102 format('ni   = ',I45,', nj   = ',I5)
+      103 format('Using mpi record length: ',I8)
+
       if (self%dtype /= GRADSMPI) then
-         print *,'[ingest_cm1::cm1_set_nodes]: Dataset not of MPI type, aborting'
+         call cm1log(self, LOG_WARN, 'cm1_set_nodes', 'Dataset not of MPI type, aborting.')
          cm1_set_nodes = 0
          return
       end if
 
       self%nodex = mpix
       self%nodey = mpiy
-      print *,'[ingest_cm1::cm1_set_nodes]: nodex=',self%nodex,' nodey=',self%nodey
+      write(output,101) self%nodex, self%nodey
+      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
 
       select case(self%grid)
         case ('s','w')
@@ -670,15 +682,17 @@ contains
            self%ni = self%nx/self%nodex
            self%nj = 1+(self%ny-1)/self%nodey
         case default
-           print *,'Unsupported grid'
+           call cm1log(self, LOG_ERROR, 'cm1_set_nodes', 'Unsupported grid')
            stop
       end select
-      print *,'[ingest_cm1::cm1_set_nodes]: ni=',self%ni,' nj=',self%nj
+      write(output,102) self%ni, self%nj
+      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
 
       allocate(recltest(self%ni,self%nj))
       inquire(iolength=self%mpireclen) recltest
       deallocate(recltest)
-      print *,'[ingest_cm1::cm1_set_nodes]: mpi recl = ',self%mpireclen
+      write(output,103) recltest
+      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
 
       cm1_set_nodes = self%nodex*self%nodey
    end function cm1_set_nodes
@@ -863,7 +877,6 @@ contains
 
       1001 format('[ingestcm1',3(':',A),']: Error: ',A)
       1002 format('[ingestcm1',3(':',A),']: Warning: ',A)
-      1003 format('[ingestcm1',3(':',A),']: Info: ',A)
       1004 format('[ingestcm1',3(':',A),']: ',A)
 
       select case (self%dtype)
@@ -888,7 +901,7 @@ contains
             write(error_unit,1002) trim(proto), self%grid, funcname, message
 
          case (LOG_INFO)
-            write(error_unit,1003) trim(proto), self%grid, funcname, message
+            write(error_unit,1004) trim(proto), self%grid, funcname, message
 
          case (LOG_MSG)
             write(output_unit,1004) trim(proto), self%grid, funcname, message

@@ -1,0 +1,5 @@
+*.o
+src/test_cm1
+src/test_cm1_mpi
+*.mod
+*.a

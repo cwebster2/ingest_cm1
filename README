@@ -1,5 +1,7 @@
 Ingest_cm1
 
+README
+
 Ingest_cm1 is a Fortran module to abstract access to model output 
 files from George Bryan's CM1 cloud model.  
 
@@ -13,11 +15,13 @@ CM1 namelist.input file:
 
 Future output format support is expected for NetCDF4/HDF output.
 
+GETTING THE SOFTWARE
+
+$ git clone https://github.com/cwebster2/ingest_cm1.git
 
 INSTALLING
 
-$ cd src; make
-
+$ cd ingest_cm1/src; make
 
 USING
 

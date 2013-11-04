@@ -4,7 +4,7 @@
 #
 FC=ifort
 CC=icc
-FFLAGS= -g -warn -stand 08 -traceback -assume byterecl -xHost 
+FFLAGS= -warn -stand 08 -traceback -assume byterecl -xHost 
 #FFLAGS= -assume byterecl -g -debug full
 #-diag-enable sc3
 
@@ -35,6 +35,12 @@ install: $(INGESTLIB) test_cm1
 	mkdir -p ../lib ../include
 	cp $(INGESTLIB) ../lib
 	cp ingest_cm1.mod ../include
+
+tags: ingest_cm1.f90
+	ctags -R
+
+#doc:
+#	doxygen ../Doxygen.conf
 
 %.o: %.f
 	$(FC) $(FFLAGS) $(OUTPUTINC) -c $<

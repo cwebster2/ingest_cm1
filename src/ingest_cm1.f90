@@ -1,23 +1,26 @@
 !==========================================================================!
-!                                                                          !
-!   Ingest_CM1                                                             !
-!                                                                          !
-!                                                                          !
-!   A Fortran 2003 module to access model output by the CM1 cloud model    !
-!   by George Bryan.                                                       !
-!                                                                          !
-!   Formats supported : grads style flat files                             !
-!                       - multi file per time step (MPI)                   !
-!                       - single file per time step                        !
-!                                                                          !
-!                       Requirement: T dimension values must conincide     !
-!                                    with filenames.                       !
-!                                                                          !
-!   Future formats    : grads style flat files                             !
-!                       - all timesteps in one file                        !
-!                                                                          !
-!                       netcdf / hdf5 files                                !
-!                                                                          !
+!
+!   Ingest_CM1
+!
+!   Casey Webster, Dept of Meteorology, Penn State
+!
+!   DESCRIPTION:
+!    A Fortran 2003 module to access model output by the CM1 cloud model
+!    by George Bryan.
+!
+!    Formats supported :
+!       * grads style flat files
+!         * multi file per time step (MPI)
+!         * single file per time step
+!
+!                        Requirement: T dimension values must conincide
+!                                     with filenames.
+!
+!    Future formats:
+!      * grads style flat files
+!        * all timesteps in one file
+!      * netcdf / hdf5 files
+!
 !==========================================================================!
 
 
@@ -96,7 +99,8 @@ module ingest_cm1
          procedure, public ,pass(self) :: cm1_z
          procedure, public ,pass(self) :: cm1_t
 
-!         final :: close_cm1
+         ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
+         final :: final_cm1
 
 
    end type cm1
@@ -265,6 +269,17 @@ contains
       read_ctl = 1
 
    end function read_ctl
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   subroutine final_cm1(self)
+      implicit none
+      type(cm1) :: self
+      integer :: stat
+
+      stat = close_cm1(self)
+
+   end subroutine final_cm1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

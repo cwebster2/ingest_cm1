@@ -2,9 +2,9 @@
 
 # SET your compiler and any compile / link options here:
 #
-FC=ifort
-CC=icc
-FFLAGS= -warn -stand 08 -traceback -assume byterecl -xHost 
+FC=gfortran-4.8.1
+CC=gcc
+FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 #FFLAGS= -assume byterecl -g -debug full
 #-diag-enable sc3
 
@@ -37,7 +37,7 @@ install: $(INGESTLIB) test_cm1
 	cp ingest_cm1.mod ../include
 
 tags: ingest_cm1.f90
-	ctags -R
+	ctags -R --fortran-kinds=+i
 
 #doc:
 #	doxygen ../Doxygen.conf
@@ -51,4 +51,4 @@ tags: ingest_cm1.f90
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 clean: 
-	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1 test_cm1_mpi *.mod
+	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1.o test_cm1_mpi.o test_cm1 test_cm1_mpi *.mod

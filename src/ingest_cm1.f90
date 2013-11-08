@@ -100,7 +100,8 @@ module ingest_cm1
          procedure, public ,pass(self) :: cm1_t
 
          ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
-         final :: final_cm1
+         !TODO: finalization needs gfortran 4.9 or ifort
+         !!!final :: final_cm1
 
 
    end type cm1
@@ -150,7 +151,7 @@ contains
           open_cm1 = self%read_ctl()
           self%nunits = 1
           allocate(self%dat_units(self%nunits))
-          self%isopen = 1
+          self%isopen = .true.
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -165,7 +166,7 @@ contains
           open_cm1 = self%read_ctl()
           self%nunits = self%cm1_set_nodes(nodex,nodey)
           allocate(self%dat_units(self%nunits))
-          self%isopen = 1
+          self%isopen = .true.
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -232,7 +233,8 @@ contains
       !
       ! Modify cm1 to write your ctl file this way, or hand edit them
       read(self%ctl_unit,501) self%nt, self%t0, self%dt
-      501 format('tdef ',I10,' linear ',11x,I4,1x,I5,'YR')
+      !!! format('tdef ',I10,' linear ',11x,I4,1x,I5,'YR')
+      501 format( 5x    ,I10, 8x,       11x,I4,1x,I5, 2x)
       allocate(self%times(self%nt))
       do i = 1, self%nt
          self%times(i) = self%t0 + ((i-1)*self%dt)
@@ -313,7 +315,7 @@ contains
       self%nt = 0
       self%nv = 0
 
-      self%isopen = 0
+      self%isopen = .false.
       close_cm1 = 1
       call cm1log(self, LOG_MSG, 'close_cm1', 'Dataset closed:')
 

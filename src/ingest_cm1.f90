@@ -34,6 +34,7 @@ module ingest_cm1
    public :: variable, cm1
 
 ! Parameters to specify dataset type
+   integer, public, parameter :: GRADSSINGLE = 2
    integer, public, parameter :: GRADS = 3
    integer, public, parameter :: GRADSMPI = 4
    integer, public, parameter :: HDF = 5
@@ -52,9 +53,9 @@ module ingest_cm1
       character(len=64)  :: basename
       integer            :: dtype
       integer            :: nx, ny, nz, nt, nv, dt
-      real, dimension(:), allocatable    :: x, y, z
+      real, dimension(:), allocatable :: x, y, z
       integer, dimension(:), allocatable :: times
-      type (variable), dimension(:), allocatable :: vars
+      type (variable), dimension(:), allocatable  :: vars
       integer            :: t0
       logical            :: isopen = .false., ismult = .false.
 
@@ -76,6 +77,7 @@ module ingest_cm1
 
          procedure, pass(self) :: cm1_set_nodes
          procedure, pass(self) :: read_ctl
+         !procedure, pass(self) :: scan_hdf
          procedure, pass(self) :: read3DXYSlice
          procedure, pass(self) :: check_open
          procedure, pass(self) :: check_mult
@@ -173,6 +175,14 @@ contains
         case (HDF)
           call cm1log(self, LOG_ERROR, 'open_cm1', 'HDF ingest not implemented.')
           stop
+
+          call cm1log(self, LOG_INFO, 'open_cm1', 'Scanning HDF files.')
+          !open_cm1 = self%scan_hdf()
+          !allocate(self%dat_units(self%nunits))
+          self%isopen = .true.
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         case default
           call cm1log(self, LOG_ERROR, 'open_cm1', 'unknown dset type.')
           stop

@@ -118,14 +118,14 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function open_cm1(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey)
+   integer function open_cm1(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey, hdfmetadatatime)
       implicit none
       class(cm1) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
       character, optional :: grid
-      integer, optional :: nodex, nodey
+      integer, optional :: nodex, nodey, hdfmetadatatime
 
       if (self%isopen) then
          call cm1log(self, LOG_WARN, 'open_cm1', 'Already open, aborting')
@@ -173,12 +173,16 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         case (HDF)
-          call cm1log(self, LOG_ERROR, 'open_cm1', 'HDF ingest not implemented.')
-          stop
+          if (.not.present(hdfmetadatatime)) then
+            call cm1log(self, LOG_ERROR, 'open_cm1', 'HDF open requires a valid time to get metadata for the dataset')
+            open_cm1 = 0
+            return
+          endif
 
           call cm1log(self, LOG_INFO, 'open_cm1', 'Scanning HDF files.')
-          !open_cm1 = self%scan_hdf()
-          !allocate(self%dat_units(self%nunits))
+          open_cm1 = self%scan_hdf(hdfmetadatatime)
+          self%nunits = 1
+          allocate(self%dat_units(self%nunits))
           self%isopen = .true.
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -281,6 +285,15 @@ contains
       read_ctl = 1
 
    end function read_ctl
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+          open_cm1 = self%scan_hdf(hdfmetadatatime)
+  integer function scan_hdf(self, hdfmetatime)
+    implicit none
+    class(cm1)          :: self
+    integer, intent(in) :: hdfmetatime
+  end function scan_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

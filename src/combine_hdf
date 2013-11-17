@@ -33,9 +33,8 @@ def main():
          time = m.groups()[0]
          times.append((time, fname))
 
-   #for time in times:
-   #   process_time(time, dsetname)
-   process_time(times[0], dsetname)
+   for time in times:
+      process_time(time, dsetname)
 
 
 def process_time(time, dsetname):
@@ -167,6 +166,34 @@ def process_time(time, dsetname):
    #===================================================================
    # Process 3D basestate
    print("  3D base state datasets...",end='')
+   sys.stdout.flush()
+
+   from3d = h5files[0]['/3d_basestate']
+   for name in from3d:
+      print("{0}...".format(name),end='')
+      sys.stdout.flush()
+      dset = "/3d_basestate/{0}".format(name)
+      (mynz, mynj, myni) = from3d[name].shape
+      njp1 = 0
+      nip1 = 0
+      to3d = basestate_3d
+      if (mynz == nz+1):
+         ds3d = np.zeros((nz+1,ny,nx), np.float32)
+      elif (mynj == nj+1):
+         ds3d = np.zeros((nz,ny+1,nx), np.float32)
+         njp1 = 1
+      elif (myni == ni+1):
+         ds3d = np.zeros((nz,ny,nx+1), np.float32)
+         nip1 = 1
+      else:
+         ds3d = np.zeros((nz,ny,nx), np.float32)
+
+      for j in range(nodey):
+        for i in range(nodex):
+          ds3d[0:mynz, j*nj:(j+1)*nj+njp1, i*ni:(i+1)*ni+nip1] = h5files[j*nodex+i][dset]
+      to3d.create_dataset(name, data=ds3d, compression="gzip", compression_opts=2)
+      copy_attrs(from3d, to3d, name)
+
 
    print("Done")
    #===================================================================
@@ -200,22 +227,13 @@ def process_time(time, dsetname):
       
       for j in range(nodey):
         for i in range(nodex):
-          #print("\ni={0}, j={1}".format(i,j))
-          #print("ni={0}, nj={1}".format(ni,nj))
-          #print("X range {0} -- {1}".format(i*ni, (i+1)*ni))
-          #print("Y range {0} -- {1}".format(j*nj, (j+1)*nj))
-          #print("File #  {0}".format(j*nodex+i))
-          #print(ds3d[:,j*nj:(j+1)*nj+njp1, i*ni:(i+1)*ni+nip1].shape)
-          #print(h5files[j*nodex+i][dset].shape)
           ds3d[0:mynz, j*nj:(j+1)*nj+njp1, i*ni:(i+1)*ni+nip1] = h5files[j*nodex+i][dset]
       to3d.create_dataset(name, data=ds3d, compression="gzip", compression_opts=2)
-      #to3d[name] = ds3d
       copy_attrs(from3d, to3d, name)
 
-
-
-
-
+#TODO: chunk dims?
+#TODO: allow user to specify which datasets to copy
+#TODO: allow user to specift slice to copy instead of whole dataset
 
    print("Done")
    #===================================================================
@@ -228,6 +246,7 @@ def process_time(time, dsetname):
    print("  Closing output files")
    outfile.close()
 
+#======================================================================
 def move_scalar_dset(source, dest, dset):
   dest[dset] = source[dset][()]
   copy_attrs(source, dest, dset)

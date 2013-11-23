@@ -2,7 +2,7 @@
 
 # SET your compiler and any compile / link options here:
 #
-FC=gfortran-4.8.1
+FC=gfortran-4.8.2
 CC=gcc
 FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 #FFLAGS= -assume byterecl -g -debug full

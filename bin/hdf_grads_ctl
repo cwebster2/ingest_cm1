@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+
+import argparse
+import os.path
+import glob
+import re
+import h5py
+import io
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-d', '--dset', dest='dsetname', required=True, help='Dataset base name')
+  parser.add_argument('-p', '--path', dest='dsetpath', required=True, help='Path to Dataset')
+  args = parser.parse_args()
+
+  dsetname = args.dsetname
+  dsetpath = args.dsetpath
+
+  dirmatch = "{0}.*.h5".format(os.path.join(dsetpath,dsetname))
+  print("\nWriting CTL file for HDF dataset: {0}\n".format(dirmatch))
+
+  hdfdirs = glob.glob(dirmatch)
+
+  times = []
+
+  for dir in hdfdirs:
+    fname = dir
+    m = re.search("{0}.(\d+).h5".format(os.path.join(dsetpath,dsetname)),fname)
+    if m:
+      time = m.groups()[0]
+      times.append(int(time))
+
+  times.sort()
+  hdfmetadata = h5py.File(hdfdirs[0], 'r+')
+
+  write_control_file(dsetname,times,hdfmetadata,'s')
+  write_control_file(dsetname,times,hdfmetadata,'u')
+  write_control_file(dsetname,times,hdfmetadata,'v')
+  write_control_file(dsetname,times,hdfmetadata,'w')
+
+def write_control_file(basename, T, hdfmeta, grid):
+  print("Writing GRADS ctl file for grid {0}".format(grid))
+
+  if grid == 'u':
+    X = hdfmeta['/mesh/xf']
+  else:
+    X = hdfmeta['/mesh/xh'] 
+
+  if grid == 'v':
+    Y = hdfmeta['/mesh/yf']
+  else:
+    Y = hdfmeta['/mesh/yh'] 
+
+  if grid == 'w':
+    Z = hdfmeta['/mesh/zf']
+  else:
+    Z = hdfmeta['/mesh/zh'] 
+  
+  T0 = T[0]
+  dt = T[1] - T[0]
+  nt = int(T[len(T)-1]/dt + 1)
+
+  vars2d = []
+  vars3d = []
+
+  if grid == 's':
+    v2d = hdfmeta['/2d']
+    for v in v2d:
+      dset="/2d/{0}".format(v)
+      vname = v
+      vdesc = hdfmeta[dset].attrs['description'][0].decode("utf-8")
+      vunit = hdfmeta[dset].attrs['units'][0].decode("utf-8")
+      vars2d.append((dset, vname, vdesc, vunit))
+
+    v3d = hdfmeta['/3d_s']
+    for v in v3d:
+      dset="/3d_s/{0}".format(v)
+      vname = v
+      vdesc = hdfmeta[dset].attrs['description'][0].decode("utf-8")
+      vunit = hdfmeta[dset].attrs['units'][0].decode("utf-8")
+      vars3d.append((dset, vname, vdesc, vunit))
+    
+  elif grid == 'u':
+    v3d = hdfmeta['/3d_u']
+    for v in v3d:
+      dset="/3d_u/{0}".format(v)
+      vname = v
+      vdesc = hdfmeta[dset].attrs['description'][0].decode("utf-8")
+      vunit = hdfmeta[dset].attrs['units'][0].decode("utf-8")
+      vars3d.append((dset, vname, vdesc, vunit))
+
+  elif grid == 'v':
+    v3d = hdfmeta['/3d_v']
+    for v in v3d:
+      dset="/3d_v/{0}".format(v)
+      vname = v
+      vdesc = hdfmeta[dset].attrs['description'][0].decode("utf-8")
+      vunit = hdfmeta[dset].attrs['units'][0].decode("utf-8")
+      vars3d.append((dset, vname, vdesc, vunit))
+
+  elif grid == 'w':
+    v3d = hdfmeta['/3d_w']
+    for v in v3d:
+      dset="/3d_w/{0}".format(v)
+      vname = v
+      vdesc = hdfmeta[dset].attrs['description'][0].decode("utf-8")
+      vunit = hdfmeta[dset].attrs['units'][0].decode("utf-8")
+      vars3d.append((dset, vname, vdesc, vunit))
+
+  nv = len(vars2d) + len(vars3d)
+
+  f = open("{0}_{1}.ctl".format(basename,grid), 'w', encoding="utf-8")
+
+  print('dset ^{0}.0%y4.h5'.format(basename), file=f)
+  print('options template', file=f)
+  print('title {0} {1}'.format(basename,grid), file=f)
+  print('dtype hdf5_grid', file=f)
+  print('cachesize 16056320', file=f)
+  print('undef\t-32768.00000', file=f)
+  print('xdef {0} levels'.format(len(X)), file=f)
+  for i in X:
+    print('\t{0}'.format(i/1000.), file=f)
+  print('ydef {0} levels'.format(len(Y)), file=f)
+  for j in Y:
+    print('\t{0}'.format(j/1000.), file=f)
+  print('zdef {0} levels'.format(len(Z)), file=f)
+  for k in Z:
+    print('\t{0}'.format(k/1000.), file=f)
+  print('tdef {0} linear 00:00Z01JAN0000 {1}YR'.format(nt, dt), file=f)
+  #print('tdef {0} linear 00:00Z01JAN{2:04d} {1}YR'.format(len(T), dt, T0), file=f)
+  print('vars {0}'.format(nv), file=f)
+  for var in vars2d:
+    print('  {0}=>{1}  0  y,x  {2} ({3})'.format(*var), file=f)
+  for var in vars3d:
+    print('  {0}=>{1}  {nz}  z,y,x  {2} ({3})'.format(*var,nz=len(Z)), file=f)
+  print('endvars', file=f)
+  f.close()
+
+if __name__ == '__main__':
+  main()
+

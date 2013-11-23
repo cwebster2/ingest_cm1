@@ -21,6 +21,9 @@
 !        * all timesteps in one file
 !      * netcdf / hdf5 files
 !
+!    TODO: for HDF support:
+!     scan_hdf
+!     derived types (if no qvpert, use qv-q00 from basestate)
 !==========================================================================!
 
 
@@ -77,7 +80,7 @@ module ingest_cm1
 
          procedure, pass(self) :: cm1_set_nodes
          procedure, pass(self) :: read_ctl
-         !procedure, pass(self) :: scan_hdf
+         procedure, pass(self) :: scan_hdf
          procedure, pass(self) :: read3DXYSlice
          procedure, pass(self) :: check_open
          procedure, pass(self) :: check_mult
@@ -288,11 +291,16 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-          open_cm1 = self%scan_hdf(hdfmetadatatime)
   integer function scan_hdf(self, hdfmetatime)
     implicit none
     class(cm1)          :: self
     integer, intent(in) :: hdfmetatime
+
+    !TODO: open the hdf file and read metadata
+    ! nx, ny, nz, X, Y,Z, vars
+    ! nt and times
+    ! return
+
   end function scan_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

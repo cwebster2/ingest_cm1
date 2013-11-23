@@ -13,7 +13,17 @@ CM1 namelist.input file:
    output_format = 1
    output_filetpe = 2 or 3
 
-Future output format support is expected for NetCDF4/HDF output.
+Support is in the works for HDF data.  This data is produced by the 
+namelist options:
+
+  output_format = 3, 4, 5
+  output_filetype = 3
+
+  NOTE: Ingest_cm1 will not natively support reading from the MPI tiled
+        HDF grids.  Use the bundled tool in bin/combine_hdf to reassemble
+        the tiled HDF output.
+
+Future output format support is expected for NetCDF4 and native MPI HDF output.
 
 GETTING THE SOFTWARE
 

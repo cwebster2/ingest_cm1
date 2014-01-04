@@ -2,14 +2,14 @@
 
 # SET your compiler and any compile / link options here:
 #
-FC=gfortran-mp-4.8
+FC=gfortran
 CC=gcc
 FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 #FFLAGS= -assume byterecl -g -debug full
 #-diag-enable sc3
 
-HDFINC=-I/opt/local/include
-HDFLIB=-L/opt/local/lib -lhdf5_fortran -lhdf5hl_fortran -lhdf5 
+HDFINC=-I/usr/include
+HDFLIB=-lhdf5_fortran -lhdf5hl_fortran -lhdf5 
 
 # You should not need to edit anything below this line.
 # -----------------------------------------------------

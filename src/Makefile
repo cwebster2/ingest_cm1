@@ -2,7 +2,7 @@
 
 # SET your compiler and any compile / link options here:
 #
-FC=gfortran-4.8.2
+FC=gfortran-mp-4.8
 CC=gcc
 FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 #FFLAGS= -assume byterecl -g -debug full
@@ -13,18 +13,21 @@ FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 #  ----------------------------------------------------
 #  ----------------------------------------------------
 
-INGESTOBJS = ingest_cm1.o 
+INGESTOBJS =  cm1_base.o cm1_grads.o cm1_grads_mpi.o ingest_cm1.o
 INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install
 
-test: test_cm1 test_cm1_mpi
+test: test_cm1 test_cm1_mpi test_cm1_hdf
 
 test_cm1: $(INGESTLIB) test_cm1.o
 	$(FC) $(FFLAGS) -o test_cm1 test_cm1.o $(INGESTLIB)
 
 test_cm1_mpi: $(INGESTLIB) test_cm1_mpi.o
 	$(FC) test_cm1_mpi.o $(FFLAGS) $(INGESTLIB) -o test_cm1_mpi
+
+test_cm1_hdf: $(INGESTLIB) test_cm1_hdf.o
+	$(FC) test_cm1_hdf.o $(FFLAGS) $(INGESTLIB) -o test_cm1_hdf
 
 ingest_cm1_lib: $(INGESTLIB)
 
@@ -51,4 +54,4 @@ tags: ingest_cm1.f90
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 clean: 
-	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1.o test_cm1_mpi.o test_cm1 test_cm1_mpi *.mod
+	rm -f $(INGESTOBJS) $(TESTOBJS) $(INGESTLIB) test_cm1.o test_cm1_mpi.o test_cm1_hdf.o test_cm1 test_cm1_mpi test_cm1_hdf *.mod

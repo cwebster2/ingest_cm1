@@ -46,7 +46,7 @@ contains
       integer, optional :: nodex, nodey, hdfmetadatatime
 
       if (self%isopen) then
-         call cm1log(self, LOG_WARN, 'open_cm1', 'Already open, aborting')
+         call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
       end if
@@ -60,15 +60,15 @@ contains
       else
         self%grid = 's'
       endif
-      call cm1log(self, LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
       if ((.not.present(nodex)) .or. (.not.present(nodey))) then
-        call cm1log(self, LOG_ERROR, 'open_cm1', 'GRADSMPI open requires nodex and nodey parameters')
+        call self%cm1log(LOG_ERROR, 'open_cm1', 'GRADSMPI open requires nodex and nodey parameters')
         open_cm1 = 0
         return
       endif
 
-      call cm1log(self, LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+      call self%cm1log(LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
       open_cm1 = self%read_ctl()
       self%nunits = self%cm1_set_nodes(nodex,nodey)
       allocate(self%dat_units(self%nunits))
@@ -100,7 +100,7 @@ contains
       integer :: nf, si, sj, i, j
 
       if (.not. self%check_open('read3DXYSlice')) then
-         call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
+         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
          read3DXYSlice = 0
          return
       end if
@@ -141,7 +141,7 @@ contains
              end do
              end do
            case default
-             call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'Unsupported MPI grid, something bad happened.')
+             call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'Unsupported MPI grid, something bad happened.')
         end select
 
       end do
@@ -167,14 +167,14 @@ contains
       end if
 
       if (self%ismult) then
-         call cm1log(self, LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
+         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
          readMultStart = 0
          return
       end if
 
       505 format(I6.6)
       if (self%nodex == 0 .or. self%nodey == 0) then
-         call cm1log(self, LOG_WARN, 'read3DMultStart', 'Need to set nodex and nodey')
+         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Need to set nodex and nodey')
          readMultStart = 0
          self%ismult = .false.
          return
@@ -183,12 +183,12 @@ contains
       do fu=0, self%nodex*self%nodey-1
          write(node,505) fu
          datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(node)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-         call cm1log(self, LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
+         call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
 
          ! open dat file
          open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
       end do
-      call cm1log(self, LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
+      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
       readMultStart = 1
       self%ismult = .true.
 
@@ -209,7 +209,7 @@ contains
       do fu=1, self%nodex*self%nodey
          close(self%dat_units(fu))
       end do
-      call cm1log(self, LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
+      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
       readMultStop = 1
       self%ismult = .false.
 
@@ -235,7 +235,7 @@ contains
       103 format('Using mpi record length: ',I8)
 
       if (self%dtype /= GRADSMPI) then
-         call cm1log(self, LOG_WARN, 'cm1_set_nodes', 'Dataset not of MPI type, aborting.')
+         call self%cm1log(LOG_WARN, 'cm1_set_nodes', 'Dataset not of MPI type, aborting.')
          cm1_set_nodes = 0
          return
       end if
@@ -243,7 +243,7 @@ contains
       self%nodex = mpix
       self%nodey = mpiy
       write(output,101) self%nodex, self%nodey
-      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
+      call self%cm1log(LOG_INFO, 'cm1_set_nodes', trim(output))
 
       select case(self%grid)
         case ('s','w')
@@ -256,17 +256,17 @@ contains
            self%ni = self%nx/self%nodex
            self%nj = 1+(self%ny-1)/self%nodey
         case default
-           call cm1log(self, LOG_ERROR, 'cm1_set_nodes', 'Unsupported grid')
+           call self%cm1log(LOG_ERROR, 'cm1_set_nodes', 'Unsupported grid')
            stop
       end select
       write(output,102) self%ni, self%nj
-      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
+      call self%cm1log(LOG_INFO, 'cm1_set_nodes', trim(output))
 
       allocate(recltest(self%ni,self%nj))
       inquire(iolength=self%mpireclen) recltest
       deallocate(recltest)
       write(output,103) recltest
-      call cm1log(self, LOG_INFO, 'cm1_set_nodes', trim(output))
+      call self%cm1log(LOG_INFO, 'cm1_set_nodes', trim(output))
 
       cm1_set_nodes = self%nodex*self%nodey
    end function cm1_set_nodes_grads_mpi

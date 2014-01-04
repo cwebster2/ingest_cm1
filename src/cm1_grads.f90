@@ -48,7 +48,7 @@ contains
       integer, optional :: nodex, nodey, hdfmetadatatime
 
       if (self%isopen) then
-         call cm1log(self, LOG_WARN, 'open_cm1', 'Already open, aborting')
+         call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
       end if
@@ -62,9 +62,9 @@ contains
       else
         self%grid = 's'
       endif
-      call cm1log(self, LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
-      call cm1log(self, LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+      call self%cm1log(LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
       open_cm1 = self%read_ctl()
       self%nunits = 1
       allocate(self%dat_units(self%nunits))
@@ -83,7 +83,7 @@ contains
       real, allocatable, dimension(:,:) :: recltest
 
       dset = trim(self%path)//'/'//trim(self%basename)//'_'//self%grid//'.ctl'
-      call cm1log(self, LOG_MSG, 'read_ctl', 'Opening: '//trim(dset))
+      call self%cm1log(LOG_MSG, 'read_ctl', 'Opening: '//trim(dset))
       open(newunit=self%ctl_unit, file=dset, status='old')
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)
@@ -97,7 +97,7 @@ contains
          read(self%ctl_unit,*) self%x(i)
       end do
       write (output,500) 'X',self%nx
-      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%ny  ! for stretched grids only.  detect and calc linear.
       allocate(self%y(self%ny))
@@ -105,7 +105,7 @@ contains
          read(self%ctl_unit,*) self%y(j)
       end do
       write (output,500) 'Y',self%ny
-      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%nz  ! for stretched grids only.  detect and calc linear.
       allocate(self%z(self%nz))
@@ -113,7 +113,7 @@ contains
          read(self%ctl_unit,*) self%z(k)
       end do
       write (output,500) 'Z',self%nz
-      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
       ! calculate timelevels.  note - supports a specific timeformat
       ! and only an integer dt (minimum timestep 1 s).
@@ -131,7 +131,7 @@ contains
          self%times(i) = self%t0 + ((i-1)*self%dt)
       end do
       write (output,500) 'T',self%nt
-      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
       ! variables
       read(self%ctl_unit,*) tmp, self%nv
@@ -146,7 +146,7 @@ contains
       end do
       503 format('... Found ',i3,' variables')
       write (output,503) self%nv
-      call cm1log(self, LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
 
       ! This determines the recl to pass to open()
@@ -155,9 +155,9 @@ contains
       deallocate(recltest)
       504 format('... Using record length = ', I10)
       write (output,504) self%reclen
-      call cm1log(self, LOG_INFO, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
-      call cm1log(self, LOG_MSG, 'read_ctl', 'Closing Grads control file: '//trim(dset))
+      call self%cm1log(LOG_MSG, 'read_ctl', 'Closing Grads control file: '//trim(dset))
       close(self%ctl_unit)
       read_ctl = 1
 
@@ -205,7 +205,7 @@ contains
 
       self%isopen = .false.
       close_cm1 = 1
-      call cm1log(self, LOG_MSG, 'close_cm1', 'Dataset closed:')
+      call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed:')
 
    end function
 
@@ -219,7 +219,7 @@ contains
       integer :: idx
 
       if (.not. self%check_open('read3DXYSlice')) then
-         call cm1log(self, LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
+         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
          read3DXYSlice = 0
          return
       end if
@@ -253,7 +253,7 @@ contains
       end if
 
       if (self%ismult) then
-         call cm1log(self, LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
+         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
          readMultStart = 0
          return
       end if
@@ -262,7 +262,7 @@ contains
       ! filename?
       write(dtime,505) time
       datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-      call cm1log(self, LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
+      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
 
       ! TODO: check if time is in times for vailidy
       !       Make sure file successfully opens!
@@ -270,7 +270,7 @@ contains
       ! open dat file
       open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
 
-      call cm1log(self, LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
+      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
       readMultStart = 1
       self%ismult = .true.
 
@@ -288,7 +288,7 @@ contains
       end if
 
       close(self%dat_units(1))
-      call cm1log(self, LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
+      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
       readMultStop = 1
       self%ismult = .false.
 
@@ -311,12 +311,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         call cm1log(self, LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
          read2DMult = 0
          return
       end if
 
-      call cm1log(self, LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       status = self%read3DXYSlice(varid, 0, Field2D(:,:))
 
@@ -343,12 +343,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         call cm1log(self, LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
          read3DMult = 0
          return
       end if
 
-      call cm1log(self, LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       do k = 1,self%nz
          status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
@@ -375,14 +375,14 @@ contains
 
       status = self%readMultStart(time)
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read2D', 'Data open failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data open failure, aborting: ')
          read2D = 0
          return
       endif
 
       status = self%read2DMult(varname, Field2D)
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read2D', 'Data read failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data read failure, aborting: ')
          read2D = 0
          status = self%readMultStop()
          return
@@ -390,7 +390,7 @@ contains
 
       status = self%readMultStop()
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read2D', 'Data close failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data close failure, aborting: ')
          read2D = 0
          return
       endif
@@ -416,14 +416,14 @@ contains
 
       status = self%readMultStart(time)
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
          read3D = 0
          return
       endif
 
       status = self%read3DMult(varname, Field3D)
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
          read3D = 0
          status = self%readMultStop()
          return
@@ -431,7 +431,7 @@ contains
 
       status = self%readMultStop()
       if (status.eq.0) then
-         call cm1log(self, LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
          read3D = 0
          return
       endif

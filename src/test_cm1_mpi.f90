@@ -17,7 +17,7 @@ program test_cm1
    real, dimension(:), allocatable :: myx, myy, myz, myt
    integer :: mydt, mynx, mynz, myny
 
-   type(cm1)         :: cm1u
+   type(cm1_grads_mpi)         :: cm1u
 
    dsetpath = '/home/casey/Research/test'
    dsetbasename = 'curved90-qv14'

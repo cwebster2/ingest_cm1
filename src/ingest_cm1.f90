@@ -29,6 +29,8 @@
 module ingest_cm1
 
    use ingest_cm1_base
+   use ingest_cm1_grads
+   use ingest_cm1_grads_mpi
 
    implicit none
 

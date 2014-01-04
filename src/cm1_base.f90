@@ -127,7 +127,6 @@ module ingest_cm1_base
       end function read2D_i
    end interface
 
-
    !for logging
    integer, public, parameter :: LOG_ERROR = 1001
    integer, public, parameter :: LOG_WARN  = 1002

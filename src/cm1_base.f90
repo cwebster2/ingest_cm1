@@ -57,6 +57,8 @@ module ingest_cm1_base
          procedure, public ,pass(self) :: cm1_z
          procedure, public ,pass(self) :: cm1_t
          procedure, public ,pass(self) :: getVarByName
+         procedure, public ,pass(self) :: read3D
+         procedure, public ,pass(self) :: read2D
 
          ! deferred procedures
          procedure(open_cm1_i), deferred, public ,pass(self) :: open_cm1
@@ -65,8 +67,6 @@ module ingest_cm1_base
          procedure(readMultStop_i), deferred, public ,pass(self) :: readMultStop
          procedure(read3DMult_i), deferred, public ,pass(self) :: read3DMult
          procedure(read2DMult_i), deferred, public ,pass(self) :: read2DMult
-         procedure(read3D_i), deferred, public ,pass(self) :: read3D
-         procedure(read2D_i), deferred, public ,pass(self) :: read2D
    end type cm1_base
 
    interface
@@ -109,22 +109,6 @@ module ingest_cm1_base
          character(len=*), intent(in) :: varname
          real, dimension(self%nx,self%ny,self%nz) :: Field3D
       end function read3DMult_i
-
-      integer function read3D_i(self, varname, time, Field3D)
-         import cm1_base
-         class(cm1_base), intent(in)   :: self
-         character(len=*), intent(in) :: varname
-         integer, intent(in) :: time
-         real, dimension(self%nx,self%ny,self%nz) :: Field3D
-      end function read3D_i
-
-      integer function read2D_i(self, varname, time, Field2D)
-         import cm1_base
-         class(cm1_base), intent(in)   :: self
-         character(len=*), intent(in) :: varname
-         integer, intent(in) :: time
-         real, dimension(self%nx,self%ny) :: Field2D
-      end function read2D_i
    end interface
 
    !for logging
@@ -133,40 +117,7 @@ module ingest_cm1_base
    integer, public, parameter :: LOG_INFO  = 1003
    integer, public, parameter :: LOG_MSG   = 1004
 
-!   ! interface block for external functions
-!   interface
-!      integer function cm1_set_nodes(self, mpix, mpiy)
-!         import cm1_base
-!         class(cm1_base) :: self
-!         integer, intent(in) :: mpix, mpiy
-!      end function cm1_set_nodes
-!
-!      integer function read_ctl(self)
-!         import cm1_base
-!         class(cm1_base) :: self
-!      end function read_ctl
-!
-!      integer function read3DXYSlice(self, varid, level, slice)
-!         import cm1_base
-!         class(cm1_base)             :: self
-!         integer, intent(in)    :: varid, level
-!         real, dimension(self%nx,self%ny) :: slice
-!      end function read3DXYSlice
-!
-!   end interface
-
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!   subroutine final_cm1(self)
-!      implicit none
-!      type(cm1_base) :: self
-!      integer :: stat
-!
-!      stat = close_cm1(self)
-!
-!   end subroutine final_cm1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -191,6 +142,87 @@ contains
       getVarByName = 0
 
    end function getVarByName
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read2D(self, varname, time, Field2D)
+      implicit none
+      class(cm1_base), intent(in)   :: self
+      character(len=*), intent(in) :: varname
+      integer, intent(in) :: time
+      real, dimension(self%nx,self%ny) :: Field2D
+      integer :: status
+
+      if (.not. self%check_open('read2D')) then
+         read2D = 0
+         return
+      end if
+
+      status = self%readMultStart(time)
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data open failure, aborting: ')
+         read2D = 0
+         return
+      endif
+
+      status = self%read2DMult(varname, Field2D)
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data read failure, aborting: ')
+         read2D = 0
+         status = self%readMultStop()
+         return
+      endif
+
+      status = self%readMultStop()
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read2D', 'Data close failure, aborting: ')
+         read2D = 0
+         return
+      endif
+
+      read2D = 1
+
+   end function read2D
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read3D(self, varname, time, Field3D)
+      implicit none
+      class(cm1_base), intent(in)   :: self
+      character(len=*), intent(in) :: varname
+      integer, intent(in) :: time
+      real, dimension(self%nx,self%ny,self%nz) :: Field3D
+      integer :: status
+
+      if (.not. self%check_open('read3D')) then
+         read3D = 0
+         return
+      end if
+
+      status = self%readMultStart(time)
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
+         read3D = 0
+         return
+      endif
+
+      status = self%read3DMult(varname, Field3D)
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
+         read3D = 0
+         status = self%readMultStop()
+         return
+      endif
+
+      status = self%readMultStop()
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
+         read3D = 0
+         return
+      endif
+
+      read3D = 1
+   end function read3D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -395,6 +427,9 @@ contains
 
          case (GRADSMPI)
             proto = 'GRMPI'
+
+         case (HDF)
+            proto = "HDF5"
 
          case default
             proto = 'X'

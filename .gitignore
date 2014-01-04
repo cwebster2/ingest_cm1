@@ -1,5 +1,7 @@
 *.o
 src/test_cm1
 src/test_cm1_mpi
+src/test_cm1_hdf
 *.mod
 *.a
+*.swp

@@ -25,8 +25,6 @@ module ingest_cm1_grads
          procedure, public ,pass(self) :: readMultStop => readMultStop_grads
          procedure, public ,pass(self) :: read3DMult => read3DMult_grads
          procedure, public ,pass(self) :: read2DMult => read2DMult_grads
-         procedure, public ,pass(self) :: read3D => read3D_grads
-         procedure, public ,pass(self) :: read2D => read2D_grads
 
          ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
          !TODO: finalization needs gfortran 4.9 or ifort
@@ -360,84 +358,4 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read2D_grads(self, varname, time, Field2D) result(read2D)
-      implicit none
-      class(cm1_grads), intent(in)   :: self
-      character(len=*), intent(in) :: varname
-      integer, intent(in) :: time
-      real, dimension(self%nx,self%ny) :: Field2D
-      integer :: status
-
-      if (.not. self%check_open('read2D')) then
-         read2D = 0
-         return
-      end if
-
-      status = self%readMultStart(time)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read2D', 'Data open failure, aborting: ')
-         read2D = 0
-         return
-      endif
-
-      status = self%read2DMult(varname, Field2D)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read2D', 'Data read failure, aborting: ')
-         read2D = 0
-         status = self%readMultStop()
-         return
-      endif
-
-      status = self%readMultStop()
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read2D', 'Data close failure, aborting: ')
-         read2D = 0
-         return
-      endif
-
-      read2D = 1
-
-   end function read2D_grads
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   integer function read3D_grads(self, varname, time, Field3D) result(read3D)
-      implicit none
-      class(cm1_grads), intent(in)   :: self
-      character(len=*), intent(in) :: varname
-      integer, intent(in) :: time
-      real, dimension(self%nx,self%ny,self%nz) :: Field3D
-      integer :: status
-
-      if (.not. self%check_open('read3D')) then
-         read3D = 0
-         return
-      end if
-
-      status = self%readMultStart(time)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
-         read3D = 0
-         return
-      endif
-
-      status = self%read3DMult(varname, Field3D)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
-         read3D = 0
-         status = self%readMultStop()
-         return
-      endif
-
-      status = self%readMultStop()
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
-         read3D = 0
-         return
-      endif
-
-      read3D = 1
-   end function read3D_grads
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end module ingest_cm1_grads

@@ -296,7 +296,7 @@ contains
 
    integer function read2DMult_grads(self, varname, Field2D) result(read2DMult)
       implicit none
-      class(cm1_grads), intent(in) :: self
+      class(cm1_grads) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny) :: Field2D
       integer :: varid,status
@@ -326,7 +326,7 @@ contains
 
    integer function read3DMult_grads(self, varname, Field3D) result(read3DMult)
       implicit none
-      class(cm1_grads), intent(in) :: self
+      class(cm1_grads) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny,self%nz) :: Field3D
       integer :: k,varid,status

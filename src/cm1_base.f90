@@ -98,14 +98,14 @@ module ingest_cm1_base
 
       integer function read2DMult_i(self, varname, Field2D)
          import cm1_base
-         class(cm1_base), intent(in) :: self
+         class(cm1_base) :: self
          character(len=*), intent(in) :: varname
          real, dimension(self%nx,self%ny) :: Field2D
       end function read2DMult_i
 
       integer function read3DMult_i(self, varname, Field3D)
          import cm1_base
-         class(cm1_base), intent(in) :: self
+         class(cm1_base) :: self
          character(len=*), intent(in) :: varname
          real, dimension(self%nx,self%ny,self%nz) :: Field3D
       end function read3DMult_i

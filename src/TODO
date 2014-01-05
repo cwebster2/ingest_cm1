@@ -1,3 +1,3 @@
 migrate select(dtype) to select type on the cm1_ derived types
 get rid of dtype variable
-
+validate time is in times when starting multread!

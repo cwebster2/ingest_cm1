@@ -36,18 +36,17 @@ program test_cm1
    print *,'status = ',status
    call check(status, 0)
 
-stop
 ! TEST some stuff
 
-  varname = 'uinterp'
+  varname = 'p'
   !status = test('Get defined variable:'//trim(varname), 32, cm1s%getVarByName, varname)
-  varid = cm1s%getVarByName('uinterp')
-   call check(varid, 32)
+  varid = cm1s%getVarByName('p')
+   call check(varid, 3)
 
   varname = 'qg'
   !status =  test('Get defined variable:'//trim(varname), 26, cm1s%getVarByName, varname)
   varid = cm1s%getVarByName(varname)
-   call check(varid, 26)
+   call check(varid, 3)
 
   varname = 'xyzvort'
   !status =  test('Get UNdefined variable:'//trim(varname), 0, cm1s%getVarByName, varname)
@@ -76,7 +75,7 @@ stop
   print *, 'Allocating dbz dims=',mynx,myny,mynz
   allocate (dbz(mynx,myny,mynz))
   print *, 'Fetching dbz'
-  status = cm1s%read3D(varname, 4500, dbz(:,:,2:mynz))
+  status = cm1s%read3D(varname, 2400, dbz(:,:,2:mynz))
   print *,'status = ',status
 
   deallocate(dbz)
@@ -84,7 +83,7 @@ stop
   allocate (dbz(mynx,myny,mynz))
   allocate (dbz2(mynx,myny,mynz,10))
   allocate (dum3(mynx,myny,mynz))
-  status = cm1s%readMultStart(4500)
+  status = cm1s%readMultStart(2400)
   print *,'status = ',status
   status = cm1s%read3DMult('dbz', dbz(:,:,2:mynz))
   print *,'status = ',status

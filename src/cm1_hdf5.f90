@@ -22,7 +22,9 @@ module ingest_cm1_hdf5
       contains
          !private
 
+         procedure, pass(self) :: get_times
          procedure, pass(self) :: scan_hdf
+         procedure, public ,pass(self) :: getVarByName => getVarByName_hdf5
          procedure, public ,pass(self) :: open_cm1 => open_cm1_hdf5
          procedure, public ,pass(self) :: close_cm1 => close_cm1_hdf5
          procedure, public ,pass(self) :: readMultStart => readMultStart_hdf5
@@ -77,6 +79,46 @@ contains
 
    end function open_cm1_hdf5
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! this is UGLY
+!TODO: is there a better way?
+
+   subroutine get_times(self)
+      implicit none
+      class(cm1_hdf5) :: self
+      character(len=*), parameter :: tmpfile = '/tmp/ingest_cm1_flist'
+      integer :: u, i, reason
+      real :: r
+
+      call execute_command_line('ls '//trim(self%path)//'/'//trim(self%basename)//'*.h5 | cut -f2 -d. > '//trim(tmpfile))
+
+      open(newunit=u, file=tmpfile, action="read")
+      i = 0
+      do
+        read(u,fmt='(A)', iostat=reason) r
+        if (reason /= 0) exit
+        i = i + 1
+      end do
+
+      self%nt = i
+      allocate(self%times(self%nt))
+!      print *, self%nt
+
+      rewind(u)
+
+      do i=1,self%nt
+         read(u,'(I5.5)') self%times(i)
+!         print *, self%times(i)
+      end do
+
+      close(u)
+
+      self%dt = self%times(2) - self%times(1)
+
+      call execute_command_line('rm '//trim(tmpfile))
+
+   end subroutine get_times
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -92,11 +134,11 @@ contains
     call h5dopen_f(file_id, dset, dset_id, err)
     call h5dread_f(dset_id, H5T_NATIVE_INTEGER, data_out, dims, err)
     call h5dclose_f(dset_id, err)
- 
+
     get_h5_scalar_int = data_out(1)
 
   end function get_h5_scalar_int
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   subroutine get_h5_1d_float(file_id, dset, err, data_out, data_len)
@@ -112,8 +154,47 @@ contains
     call h5dopen_f(file_id, dset, dset_id, err)
     call h5dread_f(dset_id, H5T_NATIVE_REAL, data_out, dims, err)
     call h5dclose_f(dset_id, err)
- 
+
   end subroutine get_h5_1d_float
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine get_h5_2d_float(file_id, dset, err, var, nx, ny)
+    implicit none
+    integer(HID_T), intent(inout) :: file_id
+    integer, intent(inout) :: err, nx, ny
+    character(len=*) :: dset
+    integer(HID_T) :: dset_id
+    integer(HSIZE_T), dimension(2) :: dims
+    real, dimension(nx,ny), intent(out) :: var
+
+    dims(1) = nx
+    dims(2) = ny
+    call h5dopen_f(file_id, dset, dset_id, err)
+    call h5dread_f(dset_id, H5T_NATIVE_REAL, var, dims, err)
+    call h5dclose_f(dset_id, err)
+
+  end subroutine get_h5_2d_float
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine get_h5_3d_float(file_id, dset, err, var, nx, ny, nz)
+    implicit none
+    integer(HID_T), intent(inout) :: file_id
+    integer, intent(inout) :: err, nx, ny, nz
+    character(len=*) :: dset
+    integer(HID_T) :: dset_id
+    integer(HSIZE_T), dimension(3) :: dims
+    real, dimension(nx,ny,nz), intent(out) :: var
+
+    dims(1) = nx
+    dims(2) = ny
+    dims(3) = nz
+    call h5dopen_f(file_id, dset, dset_id, err)
+    call h5dread_f(dset_id, H5T_NATIVE_REAL, var, dims, err)
+    call h5dclose_f(dset_id, err)
+
+  end subroutine get_h5_3d_float
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -124,15 +205,10 @@ contains
     character(len=256)  :: filename, output
     character(len=5)    :: dtime
     integer(HSIZE_T), dimension(1) :: dims
+    integer(HID_T) :: gid_3d, gid_2d, gid_base
+    integer :: i, n3d, n2d, nbase, unused
 
-    !TODO: open the hdf file and read metadata
-    ! vars
-    ! nt and times
-         !integer :: nt, nv
-         !type (variable), dimension(:), allocatable  :: vars
-         !integer, dimension(:), allocatable :: times
-
-    500 format(I5.5) 
+    500 format(I5.5)
     write(dtime, 500) hdfmetatime
 
     filename = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
@@ -144,7 +220,7 @@ contains
     self%nx = get_h5_scalar_int(self%file_id, '/grid/nx', self%h5err)
     self%ny = get_h5_scalar_int(self%file_id, '/grid/ny', self%h5err)
     self%nz = get_h5_scalar_int(self%file_id, '/grid/nz', self%h5err)
-       
+
     select case(self%grid)
        case ('u')
          self%nx = self%nx + 1
@@ -177,17 +253,87 @@ contains
          call get_h5_1d_float(self%file_id, '/mesh/zf', self%h5err, self%z, self%nz)
     end select
 
-!/grid                    Group
-!/grid/x0                 Dataset {1}
-!/grid/x1                 Dataset {1}
-!/grid/y0                 Dataset {1}
-!/grid/y1                 Dataset {1}
-!/mesh                    Group
-!/mesh/dx                 Dataset {1}
-!/mesh/dy                 Dataset {1}
-!/time                    Dataset {1}
-
     ! GET VARS
+    select case(self%grid)
+       case ('s')
+          ! scan 3d, 2d, and basestate variables
+          call h5gopen_f(self%file_id, '/3d_s', gid_3d, self%h5err)
+          call h5gopen_f(self%file_id, '/2d', gid_2d, self%h5err)
+          call h5gopen_f(self%file_id, '/basestate', gid_base, self%h5err)
+
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_2d, unused, n2d, unused, self%h5err)
+          call h5gget_info_f(gid_base, unused, nbase, unused, self%h5err)
+
+          self%nv = n3d + n2d + nbase
+          allocate(self%vars(self%nv))
+
+          do i = 1,n3d
+             call h5gget_obj_info_idx_f(gid_3d, '/3d_s', i-1, self%vars(i)%varname, unused, self%h5err)
+             self%vars(i)%levs = self%nz
+             self%vars(i)%dims = 3
+          end do
+          do i = 1,n2d
+             call h5gget_obj_info_idx_f(gid_2d, '/2d', i-1, self%vars(i+n3d)%varname, unused, self%h5err)
+             self%vars(i+n3d)%levs = 1
+             self%vars(i+n3d)%dims = 2
+          end do
+          do i = 1,nbase
+             call h5gget_obj_info_idx_f(gid_base, '/basestate', i-1, self%vars(i+n3d+n2d)%varname, unused, self%h5err)
+             self%vars(i+n2d+n3d)%levs = self%nz
+             self%vars(i+n2d+n3d)%dims = 1
+          end do
+
+          call h5gclose_f(gid_3d, self%h5err)
+          call h5gclose_f(gid_2d, self%h5err)
+          call h5gclose_f(gid_base, self%h5err)
+
+       case ('u')
+          call h5gopen_f(self%file_id, '/3d_u', gid_3d, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          self%nv = n3d
+          allocate(self%vars(self%nv))
+          do i = 1,n3d
+             call h5gget_obj_info_idx_f(gid_3d, '/3d_u', i-1, self%vars(i)%varname, unused, self%h5err)
+             self%vars(i)%levs = self%nz
+             self%vars(i)%dims = 3
+          end do
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gclose_f(gid_3d, self%h5err)
+
+       case ('v')
+          call h5gopen_f(self%file_id, '/3d_v', gid_3d, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          self%nv = n3d
+          allocate(self%vars(self%nv))
+          do i = 1,n3d
+             call h5gget_obj_info_idx_f(gid_3d, '/3d_v', i-1, self%vars(i)%varname, unused, self%h5err)
+             self%vars(i)%levs = self%nz
+             self%vars(i)%dims = 3
+          end do
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gclose_f(gid_3d, self%h5err)
+
+       case ('w')
+          call h5gopen_f(self%file_id, '/3d_w', gid_3d, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          self%nv = n3d
+          allocate(self%vars(self%nv))
+          do i = 1,n3d
+             call h5gget_obj_info_idx_f(gid_3d, '/3d_w', i-1, self%vars(i)%varname, unused, self%h5err)
+             self%vars(i)%levs = self%nz
+             self%vars(i)%dims = 3
+          end do
+          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gclose_f(gid_3d, self%h5err)
+    end select
+
+!    do i=1,self%nv
+!       print *,i,self%vars(i)%varname, self%vars(i)%levs, self%vars(i)%dims
+!    end do
+
+    ! GET TIMES
+    call self%get_times()
 
     501 format('... Found ',A1,' dimension with ',i5,' points')
     503 format('... Found ',i3,' variables')
@@ -198,12 +344,10 @@ contains
     call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
     write (output,501) 'Z',self%nz
     call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
-    !write (output,501) 'T',self%nt
-    !call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
-    !write (output,503) self%nv
-    !call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
-
-    ! GET TIMES
+    write (output,501) 'T',self%nt
+    call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+    write (output,503) self%nv
+    call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
 
     scan_hdf = 1
     call h5fclose_f(self%file_id, self%h5err)
@@ -259,35 +403,11 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!   integer function getVarByName(self,varname)
-!      implicit none
-!      class(cm1)                   :: self
-!      character(len=*), intent(in) :: varname
-!      integer :: i
-!
-!      if (.not. self%check_open('getVarByName')) then
-!         getVarByName = 0
-!         return
-!      end if
-!
-!      do i = 1, self%nv
-!         if (varname.eq.self%vars(i)%varname) then
-!            getVarByName = i
-!            return
-!         endif
-!      end do
-!
-!      getVarByName = 0
-!
-!   end function getVarByName
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
    integer function readMultStart_hdf5(self,time) result(readMultStart)
       implicit none
       class(cm1_hdf5)     :: self
       integer, intent(in) :: time
-      character(len=6) :: dtime
+      character(len=5) :: dtime
       character(len=256) :: datfile
 
       if (.not. self%check_open('read3DMultStart')) then
@@ -301,11 +421,16 @@ contains
          return
       end if
 
-      505 format(I6.6)
-      select case (self%dtype)
-         case (HDF)
-            call self%cm1log(LOG_ERROR, 'read3DMultStart', 'Not implemented.')
-      end select
+      500 format(I5.5)
+      write(dtime, 500) time
+
+      datfile = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
+
+      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Opening for Multiread: '//trim(datfile))
+      call h5fopen_f(datfile, H5F_ACC_RDONLY_F, self%file_id, self%h5err)
+
+      self%ismult = .true.
+      readMultStart = 1
 
    end function readMultStart_hdf5
 
@@ -320,21 +445,46 @@ contains
          return
       end if
 
-      select case (self%dtype)
-         case (HDF)
-            call self%cm1log(LOG_ERROR, 'read3DMultStop', 'Not implemented.')
-      end select
+      call h5fclose_f(self%file_id, self%h5err)
+      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Closed file for Multiread')
+
+      self%ismult = .false.
+      readMultStop = 1
 
    end function readMultStop_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    integer function getVarByName_hdf5(self,varname) result(getVarByName)
+       implicit none
+       class(cm1_hdf5)                   :: self
+       character(len=*), intent(in) :: varname
+       integer :: i
+ 
+       if (.not. self%check_open('getVarByName')) then
+          getVarByName = 0
+          return
+       end if
+ 
+       do i = 1, self%nv
+          if (varname.eq.self%vars(i)%varname) then
+             getVarByName = self%vars(i)%dims
+             return
+          endif
+       end do
+ 
+       getVarByName = 0
+ 
+    end function getVarByName_hdf5
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
    integer function read2DMult_hdf5(self, varname, Field2D) result(read2DMult)
       implicit none
-      class(cm1_hdf5), intent(in) :: self
+      class(cm1_hdf5) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny) :: Field2D
-      integer :: varid,status
+      integer :: varid
 
       if ((.not. self%check_open('read2DMult')) .or. (.not. self%check_mult('read2DMult'))) then
          read2DMult = 0
@@ -343,15 +493,14 @@ contains
 
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
-      if (varid.eq.0) then
+      if (varid.ne.2) then
          call self%cm1log(LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
          read2DMult = 0
          return
       end if
 
       call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      !status = self%read3DXYSlice(varid, 0, Field2D(:,:))
+      call get_h5_2d_float(self%file_id, '/2d/'//trim(varname), self%h5err, Field2D, self%nx, self%ny)
 
       read2DMult = 1
 
@@ -361,10 +510,10 @@ contains
 
    integer function read3DMult_hdf5(self, varname, Field3D) result(read3DMult)
       implicit none
-      class(cm1_hdf5), intent(in) :: self
+      class(cm1_hdf5) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny,self%nz) :: Field3D
-      integer :: k,varid,status
+      integer :: varid
 
       ! Is the dataset open (has the ctl file been scanned)
       ! Is the dataset open for reading (is the dat file open)
@@ -375,17 +524,14 @@ contains
 
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
-      if (varid.eq.0) then
+      if (varid.ne.3) then
          call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
          read3DMult = 0
          return
       end if
 
       call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      !do k = 1,self%nz
-      !   status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
-      !end do
+      call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname), self%h5err, Field3D, self%nx, self%ny, self%nz)
 
       read3DMult = 1
 

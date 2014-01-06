@@ -19,6 +19,7 @@ program test_cm1
    integer :: mydt, mynx, mynz, myny
    integer :: hdf_meta_time
 
+   type(cm1_dataset)         :: cm1
    type(cm1_hdf5)         :: cm1s
 
    dsetpath = '/Users/casey/Research/test/'
@@ -27,12 +28,12 @@ program test_cm1
    hdf_meta_time = 0
 
    !status = test("Open dataset",1, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
-   status = cm1s%open_cm1(dsetpath,dsetbasename,dsettype, hdfmetadatatime=hdf_meta_time)
+   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'],hdfmetadatatime=hdf_meta_time)
    print *,'status = ',status
    call check(status, 1)
 
    !status = test("Open dataset already open",0, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
-   status = cm1s%open_cm1(dsetpath,dsetbasename,dsettype, hdfmetadatatime=hdf_meta_time)
+   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'], hdfmetadatatime=hdf_meta_time)
    print *,'status = ',status
    call check(status, 0)
 
@@ -96,7 +97,7 @@ program test_cm1
 
 ! Close dataset
 
-   status = cm1s%close_cm1()
+   status = cm1%close_dataset()
 
    if (status.eq.0) then
       print *,'Error'
@@ -104,7 +105,7 @@ program test_cm1
       print *,'Success'
    endif
 
-   status = cm1s%close_cm1()
+   status = cm1%close_dataset()
 
    if (status.eq.0) then
       print *,'Error'

@@ -204,7 +204,6 @@ contains
     integer, intent(in) :: hdfmetatime
     character(len=256)  :: filename, output
     character(len=5)    :: dtime
-    integer(HSIZE_T), dimension(1) :: dims
     integer(HID_T) :: gid_3d, gid_2d, gid_base
     integer :: i, n3d, n2d, nbase, unused
 
@@ -254,6 +253,7 @@ contains
     end select
 
     ! GET VARS
+!TODO: read units / description attributes
     select case(self%grid)
        case ('s')
           ! scan 3d, 2d, and basestate variables
@@ -345,9 +345,9 @@ contains
     write (output,501) 'Z',self%nz
     call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
     write (output,501) 'T',self%nt
-    call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
     write (output,503) self%nv
-    call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
 
     scan_hdf = 1
     call h5fclose_f(self%file_id, self%h5err)

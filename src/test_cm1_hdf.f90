@@ -22,7 +22,7 @@ program test_cm1
    type(cm1_dataset)         :: cm1
    type(cm1_hdf5)         :: cm1s
 
-   dsetpath = '/Users/casey/Research/test/'
+   dsetpath = '/home/casey/Research/circuitAnalysis/data/reference/'
    dsetbasename = 'curved90-qv14'
    dsettype = HDF
    hdf_meta_time = 0

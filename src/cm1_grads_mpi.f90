@@ -36,7 +36,8 @@ module ingest_cm1_grads_mpi
  
 contains
 
-   integer function open_cm1_grads_mpi(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey, hdfmetadatatime) result(open_cm1)
+   integer function open_cm1_grads_mpi(self, dsetpath, dsetbasename, dsettype, &
+                                       grid, nodex, nodey, hdfmetadatatime, hdfmanage) result(open_cm1)
       implicit none
       class(cm1_grads_mpi) :: self
       character(len=*), intent(in) :: dsetpath
@@ -44,6 +45,7 @@ contains
       integer, intent(in)            :: dsettype
       character, optional :: grid
       integer, optional :: nodex, nodey, hdfmetadatatime
+      logical, optional :: hdfmanage
 
       if (self%isopen) then
          call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')

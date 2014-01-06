@@ -61,7 +61,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey,     hdfmetadatatime)
+   integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey, hdfmetadatatime)
       class(cm1_dataset) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in) :: dsetbasename
@@ -91,6 +91,7 @@ contains
          case (GRADSMPI)
             allocate(cm1_grads_mpi :: self%cm1(self%ngrids))
          case (HDF)
+            print *,"HDFALLOC", self%ngrids
             allocate(cm1_hdf5 :: self%cm1(self%ngrids))
          case default
             print *,"Unrecognized dataset type"
@@ -99,11 +100,11 @@ contains
       end select
 
       do i=1,self%ngrids
-         print *,"Opening grid "//grids(i)
-         status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, hdfmetadatatime)
+         print *,"Opening grid "//grids(i), i
+         status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, hdfmetadatatime, .true.)
          if (status.ne.1) then
             print *,"Error opening dataet"
-            stop
+            !stop
          end if
       end do
 

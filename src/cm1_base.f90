@@ -70,7 +70,7 @@ module ingest_cm1_base
    end type cm1_base
 
    interface
-      integer function open_cm1_i(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey, hdfmetadatatime)
+      integer function open_cm1_i(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey, hdfmetadatatime, hdfmanage)
          import cm1_base
          class(cm1_base) :: self
          character(len=*), intent(in) :: dsetpath
@@ -78,6 +78,7 @@ module ingest_cm1_base
          integer, intent(in)          :: dsettype
          character, optional :: grid
          integer, optional :: nodex, nodey, hdfmetadatatime
+         logical, optional :: hdfmanage
       end function open_cm1_i
 
       integer function close_cm1_i(self)

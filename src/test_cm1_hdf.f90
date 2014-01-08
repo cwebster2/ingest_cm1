@@ -11,16 +11,15 @@ program test_cm1
    character(len=128) :: dsetpath
    character(len=64)  :: dsetbasename
    integer            :: dsettype
-   integer            :: varid
    character(len=32)  :: varname
    real, dimension(:,:,:), allocatable :: dbz, dum3
-   real, dimension(:,:,:,:), allocatable :: dbz2
-   real, dimension(:), allocatable :: myx, myy, myz, myt
-   integer :: mydt, mynx, mynz, myny
+   real, dimension(:), allocatable :: x_s, y_s, z_s
+   real, dimension(:), allocatable :: x_u, y_v, z_w
+   integer :: nx_s, nz_s, ny_s
+   integer :: nx_u, nz_w, ny_v
    integer :: hdf_meta_time
 
    type(cm1_dataset)         :: cm1
-   type(cm1_hdf5)         :: cm1s
 
    dsetpath = '/home/casey/Research/circuitAnalysis/data/reference/'
    dsetbasename = 'curved90-qv14'
@@ -29,70 +28,64 @@ program test_cm1
 
    !status = test("Open dataset",1, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
    status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'],hdfmetadatatime=hdf_meta_time)
-   print *,'status = ',status
    call check(status, 1)
 
    !status = test("Open dataset already open",0, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
    status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'], hdfmetadatatime=hdf_meta_time)
-   print *,'status = ',status
    call check(status, 0)
 
 ! TEST some stuff
 
-  varname = 'p'
-  !status = test('Get defined variable:'//trim(varname), 32, cm1s%getVarByName, varname)
-  varid = cm1s%getVarByName('p')
-   call check(varid, 3)
-
-  varname = 'qg'
-  !status =  test('Get defined variable:'//trim(varname), 26, cm1s%getVarByName, varname)
-  varid = cm1s%getVarByName(varname)
-   call check(varid, 3)
-
-  varname = 'xyzvort'
-  !status =  test('Get UNdefined variable:'//trim(varname), 0, cm1s%getVarByName, varname)
-  varid = cm1s%getVarByName(varname)
-   call check(varid, 0)
-
-
   print *,'Getting dimensions of data'
-  !mynx = test('NX', 300, cm1s%cm1_nx)
-  mynx = cm1s%cm1_nx()
-  allocate(myx(mynx))
-  status = cm1s%cm1_x(myx)
+  nx_s = cm1%get_nx('s')
+  call check(nx_s, 448)
+  allocate(x_s(nx_s))
+  status = cm1%get_x('s',x_s)
 
-  !myny = test('NY', 300, cm1s%cm1_ny)
-  myny = cm1s%cm1_ny()
-  allocate(myy(myny))
-  status = cm1s%cm1_y(myy)
+  ny_s = cm1%get_ny('s')
+  call check(ny_s, 448)
+  allocate(y_s(ny_s))
+  status = cm1%get_y('s',y_s)
 
-  !mynz =  test('NZ', 72, cm1s%cm1_nz) + 1
-  mynz = cm1s%cm1_nz() + 1
-  allocate(myz(mynz))
-  status = cm1s%cm1_z(myz(2:mynz))
-  myz(1) = 0.0
+  nz_s = cm1%get_nz('s')
+  call check(nz_s, 68)
+  allocate(z_s(nz_s))
+  status = cm1%get_z('s',z_s)
+
+  nx_u = cm1%get_nx('u')
+  call check(nx_u, 449)
+  allocate(x_u(nx_u))
+  status = cm1%get_x('u',x_u)
+
+  ny_v = cm1%get_ny('v')
+  call check(ny_v, 449)
+  allocate(y_v(ny_v))
+  status = cm1%get_y('v',y_v)
+
+  nz_w = cm1%get_nz('w')
+  call check(nz_w, 69)
+  allocate(z_w(nz_w))
+  status = cm1%get_z('w',z_w)
 
   varname = 'dbz'
-  print *, 'Allocating dbz dims=',mynx,myny,mynz
-  allocate (dbz(mynx,myny,mynz))
+  print *, 'Allocating dbz dims (s)=',nx_s,ny_s,nz_s
+  allocate (dbz(nx_s,ny_s,nz_s))
   print *, 'Fetching dbz'
-  status = cm1s%read3D(varname, 2400, dbz(:,:,2:mynz))
+  status = cm1%read_3d(2400, 's', varname, dbz(:,:,:))
   print *,'status = ',status
 
   deallocate(dbz)
-  print *,'Reallocating and doing multiread'
-  allocate (dbz(mynx,myny,mynz))
-  allocate (dbz2(mynx,myny,mynz,10))
-  allocate (dum3(mynx,myny,mynz))
-  status = cm1s%readMultStart(2400)
+  print *,'Reallocating and changing time'
+  allocate (dbz(nx_s,ny_s,nz_s))
+  allocate (dum3(nx_u,ny_s,nz_s))
+  print *, 'Fetching dbz'
+  status = cm1%read_3d(2100, 's', 'dbz', dbz(:,:,:))
   print *,'status = ',status
-  status = cm1s%read3DMult('dbz', dbz(:,:,2:mynz))
+  print *, 'Fetching u'
+  status = cm1%read_3d(1800, 'u', 'u', dum3(:,:,:))
   print *,'status = ',status
-  status = cm1s%read3DMult('dbz', dum3)
-  dbz2(:,:,2:mynz,1) = dum3(:,:,:)
-  print *,'status = ',status
-  print *,'Stopping multiread'
-  status = cm1s%readMultStop()
+  print *, 'Fetching u'
+  status = cm1%read_3d(2100, 'u', 'u', dum3(:,:,:))
   print *,'status = ',status
 
 ! Close dataset

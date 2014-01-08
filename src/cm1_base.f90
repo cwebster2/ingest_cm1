@@ -382,7 +382,7 @@ contains
 
       ! Is the dataset open (has the ctl file been scanned)
       if (.not. self%isopen) then
-         call cm1log(self, LOG_ERROR, funcname, 'No dataset open, aborting')
+         call self%cm1log(LOG_ERROR, funcname, 'No dataset open, aborting')
          check_open = .false.
          return
       end if

@@ -22,8 +22,8 @@ module ingest_cm1_hdf5
          logical :: manage_hdf
       contains
          !private
-         procedure, pass(self) :: initiate_hdf
-         procedure, pass(self) :: deinitiate_hdf
+         !procedure, pass(self) :: initiate_hdf
+         !procedure, pass(self) :: deinitiate_hdf
 
          procedure, pass(self) :: get_times
          procedure, pass(self) :: scan_hdf
@@ -43,20 +43,22 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   subroutine initiate_hdf(self)
+   subroutine initiate_hdf()
       implicit none
-      class(cm1_hdf5) :: self
+      integer :: h5err
 
-      call h5open_f(self%h5err)
+      !call cm1log(LOG_INFO, 'initiate_hdf', 'Initializing HDF5 library')
+      call h5open_f(h5err)
    end subroutine initiate_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   subroutine deinitiate_hdf(self)
+   subroutine deinitiate_hdf()
       implicit none
-      class(cm1_hdf5) :: self
+      integer :: h5err
 
-      call h5close_f(self%h5err)
+      !call cm1log(LOG_INFO, 'deinitiate_hdf', 'De-initializing HDF5 library')
+      call h5close_f(h5err)
    end subroutine deinitiate_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -73,6 +75,7 @@ contains
       integer, optional :: nodex, nodey, hdfmetadatatime
       logical, optional :: hdfmanage
 
+
       self%dtype = dsettype
       if (present(grid)) then
         self%grid = grid
@@ -80,7 +83,6 @@ contains
         self%grid = 's'
       endif
       call self%cm1log(LOG_MSG, 'open_cm1', 'Opening HDF dataset')
-      print *, self%isopen, self%ismult 
       call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
       if (self%isopen) then
@@ -94,6 +96,7 @@ contains
       else
          self%manage_hdf = hdfmanage
       end if
+      if (self%manage_hdf) call initiate_hdf
 
       self%path = dsetpath
       self%basename = dsetbasename
@@ -108,7 +111,6 @@ contains
       call self%cm1log(LOG_INFO, 'open_cm1', 'Scanning HDF files.')
       open_cm1 = self%scan_hdf(hdfmetadatatime)
       if (open_cm1 .eq. 1) then
-         if (self%manage_hdf) call self%initiate_hdf
          self%isopen = .true.
       else
          self%isopen = .false.
@@ -250,13 +252,11 @@ contains
     filename = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
 
     call self%cm1log(LOG_INFO, 'scan_hdf', 'Scanning metadata in '//trim(filename))
-    call h5open_f(self%h5err)
     call h5fopen_f(filename, H5F_ACC_RDONLY_F, self%file_id, self%h5err)
 
     if (self%h5err .eq. -1) then
        call self%cm1log(LOG_ERROR, 'scan_hdf', 'Unable to open: '//trim(filename))
        scan_hdf = 0
-       call h5close_f(self%h5err)
        return
     end if
 
@@ -395,7 +395,6 @@ contains
 
     scan_hdf = 1
     call h5fclose_f(self%file_id, self%h5err)
-    call h5close_f(self%h5err)
 
   end function scan_hdf
 
@@ -439,9 +438,9 @@ contains
       self%nv = 0
 
       self%isopen = .false.
-      if (self%manage_hdf) call self%deinitiate_hdf
+      if (self%manage_hdf) call deinitiate_hdf
       close_cm1 = 1
-      call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed:')
+      call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed')
 
    end function close_cm1_hdf5
 

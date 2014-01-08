@@ -76,13 +76,13 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey, hdfmetadatatime)
+   integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey)
       class(cm1_dataset) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in) :: dsetbasename
       integer, intent(in)          :: dsettype
       character, dimension(:)      :: grids
-      integer, optional :: nodex, nodey, hdfmetadatatime
+      integer, optional :: nodex, nodey
 
       integer :: status, i
 
@@ -121,9 +121,9 @@ contains
             ! HDF needs some special handling to intialize the library
             case (HDF)
                call initiate_hdf()
-               status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, hdfmetadatatime, .false.)
+               status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, .false.)
             case default
-               status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, hdfmetadatatime)
+               status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey)
          end select
          if (status.ne.1) then
             call cm1log(LOG_ERROR,'open_dataset',"Error opening dataet")

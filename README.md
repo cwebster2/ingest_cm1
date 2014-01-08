@@ -44,16 +44,58 @@ particular backend classes directly if so included.
 ### open_dataset ###
 
 ```fortran
-    integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey, hdfmetadatatime)
-      class(cm1_dataset) :: self
-      character(len=*), intent(in) :: dsetpath
-      character(len=*), intent(in) :: dsetbasename
-      integer, intent(in)          :: dsettype
-      character, dimension(:)      :: grids
-      integer, optional :: nodex, nodey, hdfmetadatatime
+integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey)
+   class(cm1_dataset) :: self
+   character(len=*), intent(in) :: dsetpath
+   character(len=*), intent(in) :: dsetbasename
+   integer, intent(in)          :: dsettype
+   character, dimension(:)      :: grids
+   integer, optional :: nodex, nodey
 ```
+This opens the dataset located at `dsetpath` with basename `dsetbasename`.  
+`dsettype` is one of `GRADS`, `GRADSMPI` or `HDF`.
+`grids` is an array of grids to open, e.g. ['s', 'u', 'v', 'w'] for a full dataset or ['s'] if only the scalar grid is desired.
+The variables `nodex` and `nodey` are only used for the `GRADSMPI` dsettype.  These are the same values used in the namelist.input for the MPI run.
 
 ### close_dataset ###
+
+```fortran
+integer function close_dataset(self)
+   class(cm1_dataset) :: self
+```
+This closes the dataset.
+
 ### read_3d and read_2d ###
+
+```fortran
+integer function read_3d(self, time, grid, varname, Field3D)
+   implicit none
+   class(cm1_dataset) :: self
+   integer            :: time, gridno
+   character          :: grid
+   character(len=*)   :: varname
+   real, dimension(:,:,:) :: Field3D
+```
+These read a 2/3D variable `varname` from grid `grid` at time `time`.
+
 ### get_nx, get_ny, get_nz ###
+
+```fortran
+integer function get_nx(self, grid)
+   implicit none
+   class(cm1_dataset) :: self
+   character          :: grid
+```
+These get dimensions of the specified grid `grid`.
+
 ### get_x, get_y, get_z ###
+
+```fortran
+integer function get_x(self, grid, x)
+   implicit none
+   class(cm1_dataset) :: self
+   character          :: grid
+   integer            :: gridno
+   real, dimension(:) :: x
+```
+These get the mesh of grid `grid` along the specified dimension

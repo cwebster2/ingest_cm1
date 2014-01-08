@@ -17,21 +17,19 @@ program test_cm1
    real, dimension(:), allocatable :: x_u, y_v, z_w
    integer :: nx_s, nz_s, ny_s
    integer :: nx_u, nz_w, ny_v
-   integer :: hdf_meta_time
 
    type(cm1_dataset)         :: cm1
 
    dsetpath = '/home/casey/Research/circuitAnalysis/data/reference/'
    dsetbasename = 'curved90-qv14'
    dsettype = HDF
-   hdf_meta_time = 0
 
    !status = test("Open dataset",1, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
-   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'],hdfmetadatatime=hdf_meta_time)
+   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'])
    call check(status, 1)
 
    !status = test("Open dataset already open",0, cm1s%open_cm1, cm1s, dsetpath, dsetbasename, dsettype)
-   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'], hdfmetadatatime=hdf_meta_time)
+   status = cm1%open_dataset(dsetpath,dsetbasename,dsettype, grids=['s','u','v','w'])
    call check(status, 0)
 
 ! TEST some stuff

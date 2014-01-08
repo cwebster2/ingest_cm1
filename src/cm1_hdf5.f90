@@ -64,7 +64,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    integer function open_cm1_hdf5(self, dsetpath, dsetbasename, dsettype, & 
-                                  grid, nodex, nodey, hdfmetadatatime, hdfmanage) &
+                                  grid, nodex, nodey, hdfmanage) &
            result(open_cm1)
       implicit none
       class(cm1_hdf5) :: self
@@ -72,7 +72,7 @@ contains
       character(len=*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
       character, optional :: grid
-      integer, optional :: nodex, nodey, hdfmetadatatime
+      integer, optional :: nodex, nodey
       logical, optional :: hdfmanage
 
 
@@ -102,14 +102,8 @@ contains
       self%basename = dsetbasename
 
 
-      if (.not.present(hdfmetadatatime)) then
-        call self%cm1log(LOG_ERROR, 'open_cm1', 'HDF open requires a valid time to get metadata for the dataset')
-        open_cm1 = 0
-        return
-      endif
-
       call self%cm1log(LOG_INFO, 'open_cm1', 'Scanning HDF files.')
-      open_cm1 = self%scan_hdf(hdfmetadatatime)
+      open_cm1 = self%scan_hdf()
       if (open_cm1 .eq. 1) then
          self%isopen = .true.
       else
@@ -237,14 +231,18 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  integer function scan_hdf(self, hdfmetatime)
+  integer function scan_hdf(self)
     implicit none
     class(cm1_hdf5)     :: self
-    integer, intent(in) :: hdfmetatime
+    integer             :: hdfmetatime
     character(len=256)  :: filename, output
     character(len=5)    :: dtime
     integer(HID_T) :: gid_3d, gid_2d, gid_base
     integer :: i, n3d, n2d, nbase, unused
+
+    ! GET TIMES
+    call self%get_times()
+    hdfmetatime = self%times(1)
 
     500 format(I5.5)
     write(dtime, 500) hdfmetatime
@@ -376,8 +374,6 @@ contains
 !       print *,i,self%vars(i)%varname, self%vars(i)%levs, self%vars(i)%dims
 !    end do
 
-    ! GET TIMES
-    call self%get_times()
 
     501 format('... Found ',A1,' dimension with ',i5,' points')
     503 format('... Found ',i3,' variables')

@@ -37,14 +37,14 @@ module ingest_cm1_grads_mpi
 contains
 
    integer function open_cm1_grads_mpi(self, dsetpath, dsetbasename, dsettype, &
-                                       grid, nodex, nodey, hdfmetadatatime, hdfmanage) result(open_cm1)
+                                       grid, nodex, nodey, hdfmanage) result(open_cm1)
       implicit none
       class(cm1_grads_mpi) :: self
       character(len=*), intent(in) :: dsetpath
       character(len=*), intent(in)  :: dsetbasename
       integer, intent(in)            :: dsettype
       character, optional :: grid
-      integer, optional :: nodex, nodey, hdfmetadatatime
+      integer, optional :: nodex, nodey
       logical, optional :: hdfmanage
 
       if (self%isopen) then

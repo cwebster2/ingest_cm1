@@ -68,7 +68,7 @@ module ingest_cm1
          procedure, public, pass(self) :: get_x
          procedure, public, pass(self) :: get_y
          procedure, public, pass(self) :: get_z
-         !procedure, public, pass(self) :: get_var_info
+         procedure, public, pass(self) :: get_var_exists
 
    end type cm1_dataset
 
@@ -376,6 +376,27 @@ contains
       get_z = self%cm1(gridno)%cm1_z(z)
 
    end function get_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   logical function get_var_exists(self, grid, varname)
+      implicit none
+      class(cm1_dataset) :: self
+      character          :: grid
+      integer            :: gridno, varid
+      character(len=*)   :: varname
+
+      get_var_exists = .false.
+
+      gridno = self%check_valid('get_var_exists', grid)
+      if (gridno .eq. -1) return
+
+      varid = self%cm1(gridno)%getVarByName(varname)
+      if (varid .eq. 0) return
+
+      get_var_exists = .true.
+
+   end function
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

@@ -1,3 +1,4 @@
 migrate select(dtype) to select type on the cm1_ derived types
 get rid of dtype variable
 validate time is in times when starting multread!
+eliminate need to specify grid in get_var_exists, read_3d and read_2d

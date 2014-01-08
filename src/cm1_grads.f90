@@ -316,7 +316,7 @@ contains
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_MSG, 'read2DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       status = self%read3DXYSlice(varid, 0, Field2D(:,:))
 
@@ -343,12 +343,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_INFO, 'read3DMult', 'Variable not found: '//trim(varname))
          read3DMult = 0
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_MSG, 'read3DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       do k = 1,self%nz
          status = self%read3DXYSlice(varid, k, Field3D(:,:,k))

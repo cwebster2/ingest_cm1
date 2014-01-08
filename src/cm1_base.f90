@@ -12,7 +12,7 @@ module ingest_cm1_base
 
    ! module variables
    private
-   public :: variable, cm1_base
+   public :: variable, cm1_base, min_loglevel
 
 ! Parameters to specify dataset type
    integer, public, parameter :: GRADSSINGLE = 2
@@ -117,6 +117,8 @@ module ingest_cm1_base
    integer, public, parameter :: LOG_WARN  = 1002
    integer, public, parameter :: LOG_INFO  = 1003
    integer, public, parameter :: LOG_MSG   = 1004
+
+   integer :: min_loglevel = LOG_MSG
 
 contains
 
@@ -420,6 +422,8 @@ contains
       1001 format('[ingestcm1',3(':',A),']: Error: ',A)
       1002 format('[ingestcm1',3(':',A),']: Warning: ',A)
       1004 format('[ingestcm1',3(':',A),']: ',A)
+
+      if (loglevel .lt. min_loglevel) return
 
       select case (self%dtype)
 

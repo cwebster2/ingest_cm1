@@ -228,11 +228,13 @@ contains
             ! Multiread is running for wrong time.  Stop and restart it
             read_3d = self%cm1(gridno)%readMultStop()
             read_3d = self%cm1(gridno)%readMultStart(time)
+            self%multtime(gridno) = time
          end if
       else
          ! Start Multiread
          self%ismult(gridno) = .true.
          read_3d = self%cm1(gridno)%readMultStart(time)
+         self%multtime(gridno) = time
       end if
 
       ! Do read here
@@ -260,11 +262,13 @@ contains
             ! Multiread is running for wrong time.  Stop and restart it
             read_2d = self%cm1(gridno)%readMultStop()
             read_2d = self%cm1(gridno)%readMultStart(time)
+            self%multtime(gridno) = time
          end if
       else
          ! Start Multiread
          self%ismult(gridno) = .true.
          read_2d = self%cm1(gridno)%readMultStart(time)
+         self%multtime(gridno) = time
       end if
 
       ! Do read here

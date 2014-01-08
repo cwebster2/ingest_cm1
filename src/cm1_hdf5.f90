@@ -124,7 +124,9 @@ contains
       integer :: u, i, reason
       real :: r
 
-      call execute_command_line('ls '//trim(self%path)//'/'//trim(self%basename)//'*.h5 | cut -f2 -d. > '//trim(tmpfile))
+      call execute_command_line('ls '//trim(self%path)//'/'//trim(self%basename)//&
+                                "*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile))
+      !print *,'ls '//trim(self%path)//'/'//trim(self%basename)//"*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile)
 
       open(newunit=u, file=tmpfile, action="read")
       i = 0
@@ -136,13 +138,13 @@ contains
 
       self%nt = i
       allocate(self%times(self%nt))
-!      print *, self%nt
+      !print *, self%nt
 
       rewind(u)
 
       do i=1,self%nt
          read(u,'(I5.5)') self%times(i)
-!         print *, self%times(i)
+         !print *, self%times(i)
       end do
 
       close(u)
@@ -538,7 +540,7 @@ contains
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_MSG, 'read2DMult', 'Reading: '//trim(varname))
       call get_h5_2d_float(self%file_id, '/2d/'//trim(varname), self%h5err, Field2D, self%nx, self%ny)
 
       read2DMult = 1
@@ -569,7 +571,7 @@ contains
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_MSG, 'read3DMult', 'Reading: '//trim(varname))
       call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname), self%h5err, Field3D, self%nx, self%ny, self%nz)
 
       read3DMult = 1

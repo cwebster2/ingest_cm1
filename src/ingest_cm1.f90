@@ -65,9 +65,11 @@ module ingest_cm1
          procedure, public, pass(self) :: get_nx
          procedure, public, pass(self) :: get_ny
          procedure, public, pass(self) :: get_nz
+         procedure, public, pass(self) :: get_nt
          procedure, public, pass(self) :: get_x
          procedure, public, pass(self) :: get_y
          procedure, public, pass(self) :: get_z
+         procedure, public, pass(self) :: get_t
          procedure, public, pass(self) :: get_var_exists
 
    end type cm1_dataset
@@ -329,6 +331,23 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   integer function get_nt(self, grid)
+      implicit none
+      class(cm1_dataset) :: self
+      character          :: grid
+      integer            :: gridno
+
+      get_nt = 0
+
+      gridno = self%check_valid('get_nz', grid)
+      if (gridno .eq. -1) return
+
+      get_nt = self%cm1(gridno)%cm1_nt()
+      
+   end function get_nt
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
    integer function get_x(self, grid, x)
       implicit none
       class(cm1_dataset) :: self
@@ -380,6 +399,24 @@ contains
       get_z = self%cm1(gridno)%cm1_z(z)
 
    end function get_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function get_t(self, grid, t)
+      implicit none
+      class(cm1_dataset) :: self
+      character          :: grid
+      integer            :: gridno
+      real, dimension(:) :: t
+
+      get_t = 0
+
+      gridno = self%check_valid('get_z', grid)
+      if (gridno .eq. -1) return
+      
+      get_t = self%cm1(gridno)%cm1_t(t)
+
+   end function get_t
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

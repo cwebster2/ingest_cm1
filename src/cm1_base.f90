@@ -118,7 +118,7 @@ module ingest_cm1_base
    integer, public, parameter :: LOG_INFO  = 1003
    integer, public, parameter :: LOG_MSG   = 1004
 
-   integer :: min_loglevel = LOG_MSG
+   integer :: min_loglevel = LOG_ERROR
 
 contains
 

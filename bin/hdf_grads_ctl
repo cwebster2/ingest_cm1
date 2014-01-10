@@ -130,7 +130,7 @@ def write_control_file(basename, T, hdfmeta, grid):
   #print('tdef {0} linear 00:00Z01JAN{2:04d} {1}YR'.format(len(T), dt, T0), file=f)
   print('vars {0}'.format(nv), file=f)
   for var in vars2d:
-    print('  {0}=>{1}  0  y,x  {2} ({3})'.format(*var), file=f)
+    print('  {0}=>{1}  1  y,x  {2} ({3})'.format(*var), file=f)
   for var in vars3d:
     print('  {0}=>{1}  {nz}  z,y,x  {2} ({3})'.format(*var,nz=len(Z)), file=f)
   print('endvars', file=f)

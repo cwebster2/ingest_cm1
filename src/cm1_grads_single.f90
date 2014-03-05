@@ -14,9 +14,7 @@ module ingest_cm1_grads_single
       procedure, public ,pass(self) :: close_cm1 => close_cm1_grads_single
       procedure, public ,pass(self) :: readMultStart => readMultStart_grads_single
       procedure, public ,pass(self) :: readMultStop => readMultStop_grads_single
-      procedure, public ,pass(self) :: read3DMult => read3DMult_grads_single
-      procedure, public ,pass(self) :: read2DMult => read2DMult_grads_single
-
+      
       ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
       !TODO: finalization needs gfortran 4.9 or ifort
       !!!final :: final_cm1
@@ -198,70 +196,5 @@ contains
 
    end function readMultStop_grads_single
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   integer function read2DMult_grads_single(self, varname, Field2D) result(read2DMult)
-      implicit none
-      class(cm1_grads_single) :: self
-      character(len=*), intent(in) :: varname
-      real, dimension(self%nx,self%ny) :: Field2D
-      integer :: varid,status
-
-      if ((.not. self%check_open('read2DMult')) .or. (.not. self%check_mult('read2DMult'))) then
-         read2DMult = 0
-         return
-      end if
-
-      ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
-      if (varid.eq.0) then
-         call self%cm1log(LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
-         read2DMult = 0
-         return
-      end if
-
-      call self%cm1log(LOG_MSG, 'read2DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      status = self%read3DXYSlice(varid, 0, Field2D(:,:))
-
-      read2DMult = 1
-
-   end function read2DMult_grads_single
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   integer function read3DMult_grads_single(self, varname, Field3D) result(read3DMult)
-      implicit none
-      class(cm1_grads_single) :: self
-      character(len=*), intent(in) :: varname
-      real, dimension(self%nx,self%ny,self%nz) :: Field3D
-      integer :: k,varid,status
-
-      ! Is the dataset open (has the ctl file been scanned)
-      ! Is the dataset open for reading (is the dat file open)
-      if ((.not. self%check_open('read3DMult')) .or. (.not. self%check_mult('read3DMult'))) then
-         read3DMult = 0
-         return
-      end if
-
-      ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
-      if (varid.eq.0) then
-         call self%cm1log(LOG_INFO, 'read3DMult', 'Variable not found: '//trim(varname))
-         read3DMult = 0
-         return
-      end if
-
-      call self%cm1log(LOG_MSG, 'read3DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      do k = 1,self%nz
-         status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
-      end do
-
-      read3DMult = 1
-
-   end function read3DMult_grads_single
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module ingest_cm1_grads_single

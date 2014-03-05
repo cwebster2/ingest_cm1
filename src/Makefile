@@ -25,7 +25,7 @@ HDFLIB=-lhdf5_fortran -lhdf5hl_fortran -lhdf5
 #  ----------------------------------------------------
 #  ----------------------------------------------------
 
-INGESTOBJS =  cm1_base.o cm1_grads.o cm1_grads_mpi.o cm1_hdf5.o ingest_cm1.o
+INGESTOBJS =  cm1_base.o cm1_grads.o cm1_grads_single.o cm1_grads_mpi.o cm1_hdf5.o ingest_cm1.o
 INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install

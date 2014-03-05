@@ -69,7 +69,7 @@ module ingest_cm1_base
          procedure(read2DMult_i), deferred, public ,pass(self) :: read2DMult
    end type cm1_base
 
-   interface
+   abstract interface
       integer function open_cm1_i(self, dsetpath, dsetbasename, dsettype, grid, nodex, nodey, hdfmanage)
          import cm1_base
          class(cm1_base) :: self

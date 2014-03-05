@@ -113,6 +113,12 @@ contains
    end function open_cm1_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!TODO: protect this with ifdef for non-gnu compiler?
+!subroutine execute_command_line(cmd)
+!   character(len=*) :: cmd
+!   call system(cmd)
+!end subroutine execute_command_line
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! this is UGLY
 !TODO: is there a better way?

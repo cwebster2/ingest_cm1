@@ -14,8 +14,8 @@ program test_cm1
    character(len=32)  :: varname
    real, dimension(:,:,:), allocatable :: dbz, dum3
    real, dimension(:,:,:,:), allocatable :: dbz2
-   real, dimension(:), allocatable :: myx, myy, myz, myt
-   integer :: mydt, mynx, mynz, myny
+   real, dimension(:), allocatable :: myx, myy, myz
+   integer :: mynx, mynz, myny
 
    type(cm1_grads_mpi)         :: cm1u
 

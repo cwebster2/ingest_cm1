@@ -2,14 +2,23 @@
 
 # SET your compiler and any compile / link options here:
 #
+# GNU Fortran build options.  Requires gcc >= 4.8
 FC=gfortran
 CC=gcc
 FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
-#FFLAGS= -assume byterecl -g -debug full
-#-diag-enable sc3
+
+# Intel Fortran build options.
+#FC=ifort
+#CC=icc
+#FFLAGS= -stand f08 -xHost -assume byterecl
+##FFLAGS= -assume byterecl -g -debug full
+##-diag-enable sc3
 
 HDFINC=-I/usr/include
 HDFLIB=-lhdf5_fortran -lhdf5hl_fortran -lhdf5 
+
+#HDFINC=-I/twist/s2/ccw5079/hdf5/include
+#HDFLIB=-L/twist/s2/ccw5079/hdf5/lib -lhdf5_fortran -lhdf5hl_fortran -lhdf5 -Wl,-rpath,/twist/s2/ccw5079/hdf5/lib
 
 # You should not need to edit anything below this line.
 # -----------------------------------------------------
@@ -43,7 +52,9 @@ install: $(INGESTLIB) test_cm1
 	cp *.mod ../include
 
 tags: ingest_cm1.f90
-	ctags -R --fortran-kinds=+i
+#	ctags -R --fortran-kinds=+i
+	etags -R *.f90
+
 
 #doc:
 #	doxygen ../Doxygen.conf

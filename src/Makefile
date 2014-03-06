@@ -30,7 +30,7 @@ INGESTLIB = ingest_cm1.a
 
 all: $(INGESTLIB) test install
 
-test: test_cm1 test_cm1_mpi test_cm1_hdf
+test: test_cm1 test_cm1_mpi test_cm1_hdf test_cm1_gsingle
 
 test_cm1: $(INGESTLIB) test_cm1.o
 	$(FC) $(FFLAGS) -o test_cm1 test_cm1.o $(INGESTLIB) $(HDFLIB)
@@ -40,6 +40,9 @@ test_cm1_mpi: $(INGESTLIB) test_cm1_mpi.o
 
 test_cm1_hdf: $(INGESTLIB) test_cm1_hdf.o
 	$(FC) test_cm1_hdf.o $(FFLAGS) $(INGESTLIB) $(HDFLIB) -o test_cm1_hdf
+
+test_cm1_gsingle: $(INGESTLIB) test_cm1_gsingle.o
+	$(FC) test_cm1_gsingle.o $(FFLAGS) $(INGESTLIB) $(HDFLIB) -o test_cm1_gsingle
 
 ingest_cm1_lib: $(INGESTLIB)
 

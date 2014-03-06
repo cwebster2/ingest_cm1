@@ -85,7 +85,9 @@ contains
       dset = trim(self%path)//'/'//trim(self%basename)//'_'//self%grid//'.ctl'
       call self%cm1log(LOG_MSG, 'read_ctl', 'Opening: '//trim(dset))
       open(newunit=self%ctl_unit, file=dset, status='old')
-      read(self%ctl_unit,*)
+      if (self%dtype .ne. GRADSSINGLE) then
+         read(self%ctl_unit,*) ! This line wont exist in single
+      endif
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)
       read(self%ctl_unit,*)

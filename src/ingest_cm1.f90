@@ -35,6 +35,7 @@ module ingest_cm1
    ! These modules implement the backend access for output types
    use ingest_cm1_grads
    use ingest_cm1_grads_mpi
+   use ingest_cm1_grads_single
    use ingest_cm1_hdf5
 
    implicit none
@@ -109,6 +110,8 @@ contains
             allocate(cm1_grads :: self%cm1(self%ngrids))
          case (GRADSMPI)
             allocate(cm1_grads_mpi :: self%cm1(self%ngrids))
+         case (GRADSSINGLE)
+            allocate(cm1_grads_single :: self%cm1(self%ngrids))
          case (HDF)
             allocate(cm1_hdf5 :: self%cm1(self%ngrids))
          case default

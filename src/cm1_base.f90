@@ -435,6 +435,9 @@ contains
 
          case (HDF)
             proto = "HDF5"
+         
+         case (GRADSSINGLE)
+            proto = "GRADS"
 
          case default
             proto = 'X'

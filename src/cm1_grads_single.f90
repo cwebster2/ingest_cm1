@@ -137,9 +137,9 @@ contains
       ! NOTE this offset is for one timestep per file!
       ! Calculate record index for 2D or 3D field
       if (self%vars(varid)%levs == 0) then ! 2D
-          idx = ((self%t-1)*(self%n2d+self%nv*self%nz)) + varid-1
+          idx = ((self%t-1)*(self%n2d+(self%nv-self%n2d)*self%nz)) + varid-1
        else ! 3D
-          idx = ((self%t-1)*(self%n2d+self%nv*self%nz)) + (self%n2d+(varid-1-self%n2d)*(self%nz)+level)
+          idx = ((self%t-1)*(self%n2d+(self%nv-self%n2d)*self%nz)) + (self%n2d+(varid-1-self%n2d)*(self%nz)+level)
        endif
 
        ! Read Slice

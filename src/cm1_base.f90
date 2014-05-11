@@ -2,7 +2,14 @@
 !
 !   Ingest_CM1_base
 !
-!   Casey Webster, Dept of Meteorology, Penn State
+!   Copyright (C) 2014 Casey Webster - All Rights Reserved
+!   You may use, distribute and modiy this code under the
+!   terms of the BSD (3-clause) license.
+!
+!   You should have received a copy of the BSD (3-clause)
+!   license with this file.  If not, please visit :
+!   http://opensource.org/licenses/BSD-3-Clause or 
+!   https://github.com/cwebster2/ingest_cm1/blob/master/LICENSE
 !
 !==========================================================================!
 

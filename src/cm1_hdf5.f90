@@ -2,7 +2,18 @@
 !
 !   Ingest_CM1_hdf
 !
-!   Casey Webster, Dept of Meteorology, Penn State
+!   Implementation of the ingest_cm1 routines to support reading from hd5
+!   datafiles.  Note that this code does not yet read the native cm1hdf5 
+!   output and requires un-tiling using a provided python program.
+!
+!   Copyright (C) 2014 Casey Webster - All Rights Reserved
+!   You may use, distribute and modiy this code under the
+!   terms of the BSD (3-clause) license.
+!
+!   You should have received a copy of the BSD (3-clause)
+!   license with this file.  If not, please visit :
+!   http://opensource.org/licenses/BSD-3-Clause or 
+!   https://github.com/cwebster2/ingest_cm1/blob/master/LICENSE
 !
 !==========================================================================!
 
@@ -130,6 +141,7 @@ contains
       integer :: u, i, reason
       real :: r
 
+!TODO: re-write this as a call to find, not ls
       call execute_command_line('ls '//trim(self%path)//'/'//trim(self%basename)//&
                                 "*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile))
       !print *,'ls '//trim(self%path)//'/'//trim(self%basename)//"*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile)

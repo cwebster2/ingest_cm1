@@ -46,6 +46,8 @@ module ingest_cm1_hdf5
          procedure, public ,pass(self) :: read3DMult => read3DMult_hdf5
          procedure, public ,pass(self) :: read2DMult => read2DMult_hdf5
 
+         procedure, private, pass(self) :: read3DDerived
+
          !TODO: finalization needs gfortran 4.9 or ifort
          !!!final :: final_cm1
    end type cm1_hdf5
@@ -585,7 +587,8 @@ contains
       varid = self%getVarByName(varname)
       if (varid.ne.3) then
          call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
-         read3DMult = 0
+         ! lets see if this variable can be reconstructed before giving up.
+         read3DMult = self%read3DDerived(varname, Field3D)
          return
       end if
 
@@ -597,5 +600,66 @@ contains
    end function read3DMult_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read3DDerived(self, varname, Field3D) result(read3D)
+     implicit none
+     class(cm1_hdf5) :: self
+     character(len=*), intent(in) :: varname
+     real, dimension(self%nx, self%ny, self%nz), intent(inout) :: Field3D
+     
+     integer :: varid0, varid
+     character(len=128) :: varname0, varname_pert
+     real, dimension(self%nz) :: Field0
+     integer :: k
+
+     ! Is the dataset open (has the ctl file been scanned)
+     ! Is the dataset open for reading (is the dat file open)
+     if ((.not. self%check_open('read3DDerived')) .or. (.not. self%check_mult('read3DDerived'))) then
+        read3D = 0
+        return
+     end if
+
+     ! This function reads a basestate variable and a perturbation variable to
+     ! return the requested variable.  e.g. p = p_0 + p', read p_0 and p' to 
+     ! return p
+
+     varname0 = trim(varname)//'0'
+     varname_pert = trim(varname)//'pert'
+
+     ! fix some quirky names
+     if (varname0 .eq. 'p0') varname0 = 'pres0'
+     if (varname0 .eq. 'rho0') varname0 = 'rh0'
+
+     ! Verify variables exist
+     varid0 = self%getVarByName(varname0)
+     varid = self%getVarByName(varname_pert)
+     if (varid0.ne.1) then
+        call self%cm1log(LOG_WARN, 'read3DDerived', 'Variable not found: '//trim(varname0))
+        read3D = 0
+        return
+     end if
+     if (varid.ne.3) then
+        call self%cm1log(LOG_WARN, 'read3DDerived', 'Variable not found: '//trim(varname_pert))
+        read3D = 0
+        return
+     end if
+
+     ! Get perturbation field into 3d variable
+     call self%cm1log(LOG_MSG, 'read3DDerived', 'Reading: '//trim(varname_pert))
+     call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname_pert), self%h5err, Field3D, self%nx, self%ny, self%nz)
+
+     ! Get basestate into 1D variable
+     call self%cm1log(LOG_MSG, 'read3DDerived', 'Reading: '//trim(varname0))
+     call get_h5_1d_float(self%file_id, '/basestate/'//trim(varname0), self%h5err, Field0, self%nz)
+
+     ! Add them
+     !$omp parallel do private(k) shared(Field3D, Field0)
+     do k = 1, self%nz
+        Field3D(:,:,k) = Field3D(:,:,k) + Field0(k)
+     end do
+
+     read3D = 1
+
+   end function read3DDerived
 
 end module ingest_cm1_hdf5

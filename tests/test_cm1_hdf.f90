@@ -17,10 +17,11 @@ program test_cm1
    real, dimension(:), allocatable :: x_u, y_v, z_w
    integer :: nx_s, nz_s, ny_s
    integer :: nx_u, nz_w, ny_v
+   integer :: k
 
    type(cm1_dataset)         :: cm1
 
-   dsetpath = '/home/casey/Research/circuitAnalysis/data/reference/'
+   dsetpath = 'data/'
    dsetbasename = 'curved90-qv14'
    dsettype = HDF
 
@@ -69,40 +70,32 @@ program test_cm1
   print *, 'Allocating dbz dims (s)=',nx_s,ny_s,nz_s
   allocate (dbz(nx_s,ny_s,nz_s))
   print *, 'Fetching dbz'
-  status = cm1%read_3d(2400, 's', varname, dbz(:,:,:))
-  print *,'status = ',status
+  status = cm1%read_3d(3600, 's', varname, dbz(:,:,:))
+  call check(status, 1)
 
   deallocate(dbz)
-  print *,'Reallocating and changing time'
-  allocate (dbz(nx_s,ny_s,nz_s))
-  allocate (dum3(nx_u,ny_s,nz_s))
-  print *, 'Fetching dbz'
-  status = cm1%read_3d(2100, 's', 'dbz', dbz(:,:,:))
-  print *,'status = ',status
-  print *, 'Fetching u'
-  status = cm1%read_3d(1800, 'u', 'u', dum3(:,:,:))
-  print *,'status = ',status
-  print *, 'Fetching u'
-  status = cm1%read_3d(2100, 'u', 'u', dum3(:,:,:))
-  print *,'status = ',status
+  allocate(dbz(nx_s,ny_s,nz_s))
+  allocate(dum3(nx_s,ny_s,nz_s))
+  print *,'Fettching p'
+  status = cm1%read_3d(3600, 's', 'p', dbz(:,:,:))
+  call check(status, 1)
+  print *,'Fetching ppert'
+  status = cm1%read_3d(3600, 's', 'ppert', dum3(:,:,:))
+  call check(status, 1)
+
+  ! calculate p0
+  print *,'Vertical profile of p0 (p, ppert, p0)'
+  do k = 1, nz_s
+     print *, k, dbz(100,100,k), dum3(100,100,k), dbz(100,100,k)-dum3(100,100,k)
+  end do
 
 ! Close dataset
 
-   status = cm1%close_dataset()
+  status = cm1%close_dataset()
+  call check(status, 1)
 
-   if (status.eq.0) then
-      print *,'Error'
-   else
-      print *,'Success'
-   endif
-
-   status = cm1%close_dataset()
-
-   if (status.eq.0) then
-      print *,'Error'
-   else
-      print *,'Success'
-   endif
+  status = cm1%close_dataset()
+  call check(status, 0)
 
    contains
 

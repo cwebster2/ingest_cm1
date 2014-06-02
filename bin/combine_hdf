@@ -1,5 +1,28 @@
 #!/usr/bin/env python3
 
+#####################################################################
+#
+#   combine_hdf
+#
+#   This python script recombines tiled MPI output from CM1.  Given
+#   a directory with HDF5 MPI output cdirs, this script will combine
+#   each tiled timestep into a single HDF5 file.  This script will
+#   process every output variable present and handles output on each
+#   of the grids (scalar, u, v, w).
+#
+#   Copyright (C) 2014 Casey Webster - All Rights Reserved
+#   You may use, distribute and modiy this code under the
+#   terms of the BSD (3-clause) license.
+#
+#   You should have received a copy of the BSD (3-clause)
+#   license with this file.  If not, please visit :
+#   http://opensource.org/licenses/BSD-3-Clause or 
+#   https://github.com/cwebster2/ingest_cm1/blob/master/LICENSE
+#
+#####################################################################
+
+#TODO: comment this code!
+
 import argparse
 import os.path
 import glob

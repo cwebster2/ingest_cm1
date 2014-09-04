@@ -18,7 +18,7 @@
 !==========================================================================!
 
 
-
+#ifdef HDF5
 module ingest_cm1_hdf5
 
    use ingest_cm1_base
@@ -60,7 +60,7 @@ contains
       implicit none
       integer :: h5err
 
-      !call cm1log(LOG_INFO, 'initiate_hdf', 'Initializing HDF5 library')
+!      call cm1log(LOG_DEBUG, 'initiate_hdf', 'Initializing HDF5 library')
       call h5open_f(h5err)
    end subroutine initiate_hdf
 
@@ -70,7 +70,7 @@ contains
       implicit none
       integer :: h5err
 
-      !call cm1log(LOG_INFO, 'deinitiate_hdf', 'De-initializing HDF5 library')
+!      call cm1log(LOG_DEBUG, 'deinitiate_hdf', 'De-initializing HDF5 library')
       call h5close_f(h5err)
    end subroutine deinitiate_hdf
 
@@ -96,7 +96,7 @@ contains
         self%grid = 's'
       endif
       call self%cm1log(LOG_MSG, 'open_cm1', 'Opening HDF dataset')
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
       if (self%isopen) then
          call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
@@ -115,7 +115,7 @@ contains
       self%basename = dsetbasename
 
 
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Scanning HDF files.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Scanning HDF files.')
       open_cm1 = self%scan_hdf()
       if (open_cm1 .eq. 1) then
          self%isopen = .true.
@@ -260,7 +260,7 @@ contains
     character(len=256)  :: filename, output
     character(len=5)    :: dtime
     integer(HID_T) :: gid_3d, gid_2d, gid_base
-    integer :: i, n3d, n2d, nbase, unused
+    integer :: i, n3d, n2d, nbase, unused, unused2
 
     ! GET TIMES
     call self%get_times()
@@ -271,7 +271,7 @@ contains
 
     filename = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
 
-    call self%cm1log(LOG_INFO, 'scan_hdf', 'Scanning metadata in '//trim(filename))
+    call self%cm1log(LOG_MSG, 'scan_hdf', 'Scanning metadata in '//trim(filename))
     call h5fopen_f(filename, H5F_ACC_RDONLY_F, self%file_id, self%h5err)
 
     if (self%h5err .eq. -1) then
@@ -325,9 +325,9 @@ contains
           call h5gopen_f(self%file_id, '/2d', gid_2d, self%h5err)
           call h5gopen_f(self%file_id, '/basestate', gid_base, self%h5err)
 
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
-          call h5gget_info_f(gid_2d, unused, n2d, unused, self%h5err)
-          call h5gget_info_f(gid_base, unused, nbase, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
+          call h5gget_info_f(gid_2d, unused, n2d, unused2, self%h5err)
+          call h5gget_info_f(gid_base, unused, nbase, unused2, self%h5err)
 
           self%nv = n3d + n2d + nbase
           allocate(self%vars(self%nv))
@@ -354,7 +354,7 @@ contains
 
        case ('u')
           call h5gopen_f(self%file_id, '/3d_u', gid_3d, self%h5err)
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           self%nv = n3d
           allocate(self%vars(self%nv))
           do i = 1,n3d
@@ -362,12 +362,12 @@ contains
              self%vars(i)%levs = self%nz
              self%vars(i)%dims = 3
           end do
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           call h5gclose_f(gid_3d, self%h5err)
 
        case ('v')
           call h5gopen_f(self%file_id, '/3d_v', gid_3d, self%h5err)
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           self%nv = n3d
           allocate(self%vars(self%nv))
           do i = 1,n3d
@@ -375,12 +375,12 @@ contains
              self%vars(i)%levs = self%nz
              self%vars(i)%dims = 3
           end do
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           call h5gclose_f(gid_3d, self%h5err)
 
        case ('w')
           call h5gopen_f(self%file_id, '/3d_w', gid_3d, self%h5err)
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           self%nv = n3d
           allocate(self%vars(self%nv))
           do i = 1,n3d
@@ -388,8 +388,10 @@ contains
              self%vars(i)%levs = self%nz
              self%vars(i)%dims = 3
           end do
-          call h5gget_info_f(gid_3d, unused, n3d, unused, self%h5err)
+          call h5gget_info_f(gid_3d, unused, n3d, unused2, self%h5err)
           call h5gclose_f(gid_3d, self%h5err)
+!TODO: need default case
+
     end select
 
 !    do i=1,self%nv
@@ -401,15 +403,15 @@ contains
     503 format('... Found ',i3,' variables')
 
     write (output,501) 'X',self%nx
-    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
+    call self%cm1log(LOG_INFO, 'scan_hdf', trim(output))
     write (output,501) 'Y',self%ny
-    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
+    call self%cm1log(LOG_INFO, 'scan_hdf', trim(output))
     write (output,501) 'Z',self%nz
-    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
+    call self%cm1log(LOG_INFO, 'scan_hdf', trim(output))
     write (output,501) 'T',self%nt
-    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
+    call self%cm1log(LOG_INFO, 'scan_hdf', trim(output))
     write (output,503) self%nv
-    call self%cm1log(LOG_MSG, 'scan_hdf', trim(output))
+    call self%cm1log(LOG_INFO, 'scan_hdf', trim(output))
 
     scan_hdf = 1
     call h5fclose_f(self%file_id, self%h5err)
@@ -487,7 +489,7 @@ contains
 
       datfile = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
 
-      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Opening for Multiread: '//trim(datfile))
+      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening for Multiread: '//trim(datfile))
       call h5fopen_f(datfile, H5F_ACC_RDONLY_F, self%file_id, self%h5err)
 
       self%ismult = .true.
@@ -507,7 +509,7 @@ contains
       end if
 
       call h5fclose_f(self%file_id, self%h5err)
-      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Closed file for Multiread')
+      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Closed file for Multiread')
 
       self%ismult = .false.
       readMultStop = 1
@@ -560,7 +562,7 @@ contains
          return
       end if
 
-      call self%cm1log(LOG_MSG, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
       call get_h5_2d_float(self%file_id, '/2d/'//trim(varname), self%h5err, Field2D, self%nx, self%ny)
 
       read2DMult = 1
@@ -592,7 +594,7 @@ contains
          return
       end if
 
-      call self%cm1log(LOG_MSG, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
       call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname), self%h5err, Field3D, self%nx, self%ny, self%nz)
 
       read3DMult = 1
@@ -630,26 +632,26 @@ contains
      if (varname0 .eq. 'p0') varname0 = 'pres0'
      if (varname0 .eq. 'rho0') varname0 = 'rh0'
 
-     ! Verify variables exist
+     ! Verify variables exist. Returns 0 for non-existance or the number of dimensions if found
      varid0 = self%getVarByName(varname0)
      varid = self%getVarByName(varname_pert)
-     if (varid0.ne.1) then
+     if (varid0.ne.1) then ! we are expecting a 1-D variable
         call self%cm1log(LOG_WARN, 'read3DDerived', 'Variable not found: '//trim(varname0))
         read3D = 0
         return
      end if
-     if (varid.ne.3) then
+     if (varid.ne.3) then ! we are expecting a 3-D variable
         call self%cm1log(LOG_WARN, 'read3DDerived', 'Variable not found: '//trim(varname_pert))
         read3D = 0
         return
      end if
 
      ! Get perturbation field into 3d variable
-     call self%cm1log(LOG_MSG, 'read3DDerived', 'Reading: '//trim(varname_pert))
+     call self%cm1log(LOG_INFO, 'read3DDerived', 'Reading: '//trim(varname_pert))
      call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname_pert), self%h5err, Field3D, self%nx, self%ny, self%nz)
 
      ! Get basestate into 1D variable
-     call self%cm1log(LOG_MSG, 'read3DDerived', 'Reading: '//trim(varname0))
+     call self%cm1log(LOG_INFO, 'read3DDerived', 'Reading: '//trim(varname0))
      call get_h5_1d_float(self%file_id, '/basestate/'//trim(varname0), self%h5err, Field0, self%nz)
 
      ! Add them
@@ -663,3 +665,4 @@ contains
    end function read3DDerived
 
 end module ingest_cm1_hdf5
+#endif

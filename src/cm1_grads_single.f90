@@ -68,9 +68,9 @@ contains
       else
         self%grid = 's'
       endif
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Reading GRADS control file.')
       open_cm1 = self%read_ctl()
       self%nunits = 1
       allocate(self%dat_units(self%nunits))
@@ -186,7 +186,7 @@ contains
       505 format(I6.6)
       ! filename?
       write(dtime,505) self%t
-      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
+      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
       readMultStart = 1
       self%ismult = .true.
 
@@ -205,7 +205,7 @@ contains
       end if
 
       self%t = 0
-      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
+      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
       readMultStop = 1
       self%ismult = .false.
 

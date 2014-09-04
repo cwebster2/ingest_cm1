@@ -77,9 +77,9 @@ contains
       else
         self%grid = 's'
       endif
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Reading GRADS control file.')
       open_cm1 = self%read_ctl()
       self%nunits = 1
       allocate(self%dat_units(self%nunits))
@@ -114,7 +114,7 @@ contains
          read(self%ctl_unit,*) self%x(i)
       end do
       write (output,500) 'X',self%nx
-      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%ny  ! for stretched grids only.  detect and calc linear.
       allocate(self%y(self%ny))
@@ -122,7 +122,7 @@ contains
          read(self%ctl_unit,*) self%y(j)
       end do
       write (output,500) 'Y',self%ny
-      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
       read(self%ctl_unit,*) tmp, self%nz  ! for stretched grids only.  detect and calc linear.
       allocate(self%z(self%nz))
@@ -130,7 +130,7 @@ contains
          read(self%ctl_unit,*) self%z(k)
       end do
       write (output,500) 'Z',self%nz
-      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
       ! calculate timelevels.  note - supports a specific timeformat
       ! and only an integer dt (minimum timestep 1 s).
@@ -148,7 +148,7 @@ contains
          self%times(i) = self%t0 + ((i-1)*self%dt)
       end do
       write (output,500) 'T',self%nt
-      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
       ! variables
       read(self%ctl_unit,*) tmp, self%nv
@@ -163,7 +163,7 @@ contains
       end do
       503 format('... Found ',i3,' variables')
       write (output,503) self%nv
-      call self%cm1log(LOG_MSG, 'read_ctl', trim(output))
+      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
 
 
       ! This determines the recl to pass to open()
@@ -172,7 +172,7 @@ contains
       deallocate(recltest)
       504 format('... Using record length = ', I10)
       write (output,504) self%reclen
-      call self%cm1log(LOG_INFO, 'read_ctl', trim(output))
+      call self%cm1log(LOG_DEBUG, 'read_ctl', trim(output))
 
       call self%cm1log(LOG_MSG, 'read_ctl', 'Closing Grads control file: '//trim(dset))
       close(self%ctl_unit)
@@ -287,7 +287,7 @@ contains
       ! open dat file
       open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
 
-      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
+      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
       readMultStart = 1
       self%ismult = .true.
 
@@ -305,7 +305,7 @@ contains
       end if
 
       close(self%dat_units(1))
-      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
+      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
       readMultStop = 1
       self%ismult = .false.
 
@@ -328,12 +328,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         call self%cm1log(LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_MSG, 'read2DMult', 'Variable not found: '//trim(varname))
          read2DMult = 0
          return
       end if
 
-      call self%cm1log(LOG_MSG, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       status = self%read3DXYSlice(varid, 0, Field2D(:,:))
 
@@ -360,12 +360,12 @@ contains
       ! Does the variable exist in this dataset?
       varid = self%getVarByName(varname)
       if (varid.eq.0) then
-         call self%cm1log(LOG_INFO, 'read3DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
          read3DMult = 0
          return
       end if
 
-      call self%cm1log(LOG_MSG, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
       ! Read the variable from the dataset
       do k = 1,self%nz
          status = self%read3DXYSlice(varid, k, Field3D(:,:,k))

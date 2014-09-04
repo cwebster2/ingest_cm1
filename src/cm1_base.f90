@@ -120,12 +120,13 @@ module ingest_cm1_base
    end interface
 
    !for logging
-   integer, public, parameter :: LOG_ERROR = 1001
-   integer, public, parameter :: LOG_WARN  = 1002
+   integer, public, parameter :: LOG_ERROR = 1005
+   integer, public, parameter :: LOG_WARN  = 1004
    integer, public, parameter :: LOG_INFO  = 1003
-   integer, public, parameter :: LOG_MSG   = 1004
+   integer, public, parameter :: LOG_MSG   = 1002
+   integer, public, parameter :: LOG_DEBUG = 1001
 
-   integer :: min_loglevel = LOG_ERROR
+   integer :: min_loglevel = LOG_INFO
 
 contains
 
@@ -460,9 +461,12 @@ contains
             write(error_unit,1002) trim(proto), self%grid, funcname, message
 
          case (LOG_INFO)
-            write(error_unit,1004) trim(proto), self%grid, funcname, message
+            write(output_unit,1004) trim(proto), self%grid, funcname, message
 
          case (LOG_MSG)
+            write(output_unit,1004) trim(proto), self%grid, funcname, message
+
+         case (LOG_DEBUG)
             write(output_unit,1004) trim(proto), self%grid, funcname, message
 
       end select

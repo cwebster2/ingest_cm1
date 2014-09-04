@@ -69,7 +69,7 @@ contains
       else
         self%grid = 's'
       endif
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Grid ('//self%grid//') selected.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
       if ((.not.present(nodex)) .or. (.not.present(nodey))) then
         call self%cm1log(LOG_ERROR, 'open_cm1', 'GRADSMPI open requires nodex and nodey parameters')
@@ -77,7 +77,7 @@ contains
         return
       endif
 
-      call self%cm1log(LOG_INFO, 'open_cm1', 'Reading GRADS control file.')
+      call self%cm1log(LOG_MSG, 'open_cm1', 'Reading GRADS control file.')
       open_cm1 = self%read_ctl()
       self%nunits = self%cm1_set_nodes(nodex,nodey)
       allocate(self%dat_units(self%nunits))
@@ -197,7 +197,7 @@ contains
          ! open dat file
          open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
       end do
-      call self%cm1log(LOG_INFO, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
+      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
       readMultStart = 1
       self%ismult = .true.
 
@@ -218,7 +218,7 @@ contains
       do fu=1, self%nodex*self%nodey
          close(self%dat_units(fu))
       end do
-      call self%cm1log(LOG_INFO, 'read3DMultStop', 'Multiread stopped.')
+      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
       readMultStop = 1
       self%ismult = .false.
 
@@ -252,7 +252,7 @@ contains
       self%nodex = mpix
       self%nodey = mpiy
       write(output,101) self%nodex, self%nodey
-      call self%cm1log(LOG_INFO, 'cm1_set_nodes', trim(output))
+      call self%cm1log(LOG_DEBUG, 'cm1_set_nodes', trim(output))
 
       select case(self%grid)
         case ('s','w')

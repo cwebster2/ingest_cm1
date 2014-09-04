@@ -46,7 +46,9 @@ module ingest_cm1
    use ingest_cm1_grads
    use ingest_cm1_grads_mpi
    use ingest_cm1_grads_single
+#ifdef HDF5
    use ingest_cm1_hdf5
+#endif
 
    implicit none
 
@@ -123,7 +125,11 @@ contains
          case (GRADSSINGLE)
             allocate(cm1_grads_single :: self%cm1(self%ngrids))
          case (HDF)
+#ifdef HDF5
             allocate(cm1_hdf5 :: self%cm1(self%ngrids))
+#else
+            call cm1log(LOG_ERROR, 'open_dataset',"Ingest_CM1 not built with HDF support")
+#endif
          case default
             call cm1log(LOG_ERROR, 'open_dataset',"Unrecognized dataset type")
             open_dataset = 0
@@ -133,10 +139,12 @@ contains
       do i=1,self%ngrids
          call cm1log(LOG_INFO, 'open_dataset',"Opening grid "//grids(i))
          select case (self%dsettype)
+#ifdef HDF5
             ! HDF needs some special handling to intialize the library
             case (HDF)
                call initiate_hdf()
                status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey, .false.)
+#endif
             case default
                status = self%cm1(i)%open_cm1(dsetpath, dsetbasename, dsettype, grids(i), nodex, nodey)
          end select
@@ -167,9 +175,11 @@ contains
          status = self%cm1(i)%close_cm1()
       end do
 
+#ifdef HDF5
       if (self%dsettype .eq. HDF) then
          call deinitiate_hdf()
       endif
+#endif
 
       deallocate(self%grids)
       deallocate(self%ismult)

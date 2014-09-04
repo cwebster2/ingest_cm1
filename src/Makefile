@@ -1,24 +1,24 @@
-#MAKEFILE
-
 # SET your compiler and any compile / link options here:
-#
+
+# GNU compiler --------------------------------------------
 # GNU Fortran build options.  Requires gcc >= 4.8
 FC=gfortran
 CC=gcc
 FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
 
+# Intel compiler -----------------------------------------
 # Intel Fortran build options.
 #FC=ifort
 #CC=icc
 #FFLAGS= -stand f08 -xHost -assume byterecl
-##FFLAGS= -assume byterecl -g -debug full
-##-diag-enable sc3
 
+# HDF5 Support -------------------------------------------
+# Uncomment the following lines to enable HDF5 support
+# Make sure that the path in HDFINC points to your HDF5 install
+HDFFLAGS=-DHDF5
 HDFINC=-I/usr/include
 HDFLIB=-lhdf5_fortran -lhdf5hl_fortran -lhdf5 
 
-#HDFINC=-I/twist/s2/ccw5079/hdf5/include
-#HDFLIB=-L/twist/s2/ccw5079/hdf5/lib -lhdf5_fortran -lhdf5hl_fortran -lhdf5 -Wl,-rpath,/twist/s2/ccw5079/hdf5/lib
 
 # You should not need to edit anything below this line.
 # -----------------------------------------------------
@@ -59,8 +59,8 @@ tags: ingest_cm1.f90
 #doc:
 #	doxygen ../Doxygen.conf
 
-%.o: %.f
-	$(FC) $(FFLAGS) $(HDFINC) -c $<
+%.o: %.F90
+	$(FC) -cpp $(FFLAGS) ${HDFFLAGS} $(HDFINC) -c $<
 
 %.o: %.f90
 	$(FC) $(FFLAGS) $(HDFINC) -c $<

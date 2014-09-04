@@ -70,6 +70,7 @@ module ingest_cm1
          procedure, pass(self)         :: check_valid
 
          procedure, public, pass(self) :: read_3d
+         procedure, public, pass(self) :: read_3d_slice
          procedure, public, pass(self) :: read_2d
 
          procedure, public, pass(self) :: open_dataset
@@ -266,6 +267,31 @@ contains
       read_3d = self%cm1(gridno)%read3DMult(varname, Field3D)
       
    end function read_3d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read_3d_slice(self, time, grid, varname, Field3D, ib, ie, jb, je, kb, ke)
+      implicit none
+      class(cm1_dataset) :: self
+      integer            :: time, gridno, ib, ie, jb, je, kb, ke
+      character          :: grid
+      character(len=*)   :: varname
+      real, dimension(:,:,:) :: Field3D
+
+      read_3d_slice = 0
+
+      gridno = self%check_valid('read_3d', grid)
+      if (gridno .eq. -1) return
+
+      if (self%ismult(gridno)) then
+         ! stop multiread if in progress for the next call
+         read_3d_slice = self%cm1(gridno)%readMultStop()
+      end if
+
+      ! Do read here
+      read_3d_slice = self%cm1(gridno)%read3DSlice(varname, time, Field3D, ib, ie, jb, je, kb, ke)
+      
+   end function read_3d_slice
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

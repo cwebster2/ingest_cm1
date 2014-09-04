@@ -65,6 +65,7 @@ module ingest_cm1_base
          procedure, public ,pass(self) :: cm1_t
          procedure, public ,pass(self) :: getVarByName
          procedure, public ,pass(self) :: read3D
+         procedure, public ,pass(self) :: read3DSlice
          procedure, public ,pass(self) :: read2D
 
          ! deferred procedures
@@ -126,7 +127,8 @@ module ingest_cm1_base
    integer, public, parameter :: LOG_MSG   = 1002
    integer, public, parameter :: LOG_DEBUG = 1001
 
-   integer :: min_loglevel = LOG_INFO
+   !integer :: min_loglevel = LOG_INFO
+   integer :: min_loglevel = LOG_DEBUG
 
 contains
 
@@ -234,6 +236,41 @@ contains
 
       read3D = 1
    end function read3D
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   integer function read3DSlice(self, varname, time, Field3D, ib, ie, jb, je, kb, ke)
+      implicit none
+      class(cm1_base), intent(in)   :: self
+      character(len=*), intent(in) :: varname
+      integer, intent(in) :: time, ib, ie, jb, je, kb, ke
+      real, dimension(ib:ie, jb:je, kb:ke) :: Field3D
+      integer :: status
+      real, dimension(self%nx,self%ny,self%nz) :: Field3DFull
+      
+      if (.not. self%check_open('read3DSlice')) then
+         read3DSlice = 0
+         return
+      end if
+
+      if ((ib < 0) .or. (jb < 0) .or. (kb < 0) .or.  &
+          (ie > self%nx) .or. (je > self%ny) .or. (ke > self%nz)) then
+         call self%cm1log(LOG_ERROR, 'read3DSice', 'Slice out of bounds, aborting')
+         read3DSlice = 0
+         return
+      endif
+ 
+      status = self%read3D(varname, time, Field3DFull)
+      if (status.eq.0) then
+         call self%cm1log(LOG_ERROR, 'read3DSice', 'Data read failure, aborting.')
+         read3DSlice = 0
+         return
+      endif
+
+      Field3D = Field3DFull(ib:ie, jb:je, kb:ke)
+
+      read3DSlice = 1
+   end function read3DSlice
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

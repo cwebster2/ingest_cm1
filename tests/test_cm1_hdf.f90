@@ -84,9 +84,25 @@ program test_cm1
   call check(status, 1)
 
   ! calculate p0
+!TODO need a file with p in it to test
   print *,'Vertical profile of p0 (p, ppert, p0)'
   do k = 1, nz_s
      print *, k, dbz(100,100,k), dum3(100,100,k), dbz(100,100,k)-dum3(100,100,k)
+  end do
+
+  ! test slicing
+  deallocate(dum3)
+  allocate(dum3(1:50,1:50,1:4))
+  print *, 'Fetching slice of p'
+  status = cm1%read_3d_slice(3600,'s','p', dum3, 1,50,1,50,1,4)
+  call check(status,1)
+  print *, 'Checking slice of p'
+  call checkl(all(dum3-dbz(1:50,1:50,1:4)<0.0001), .true.)
+  do k = 1,4
+    print *, dum3(1,1,k), dbz(1,1,k), dum3(1,1,k)-dbz(1,1,k)
+    print *, dum3(1,50,k), dbz(1,50,k), dum3(1,50,k)-dbz(1,50,k)
+    print *, dum3(50,1,k), dbz(50,1,k), dum3(50,1,k)-dbz(50,1,k)
+    print *, dum3(50,50,k), dbz(50,50,k), dum3(50,50,k)-dbz(50,50,k)
   end do
 
 ! Close dataset
@@ -111,5 +127,18 @@ program test_cm1
       end if
       print *,'--------------------------------------------------------'
    end subroutine check
+
+   subroutine checkl(val, expected)
+      implicit none
+      logical :: val, expected
+
+      print *,'--------------------------------------------------------'
+      if (val .eqv. expected) then
+         print *,'SUCCESS: ', val
+      else
+         print *,'FAILURE: ', val
+      end if
+      print *,'--------------------------------------------------------'
+   end subroutine checkl
 
 end program test_cm1

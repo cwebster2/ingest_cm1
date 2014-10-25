@@ -144,9 +144,10 @@ contains
       real :: r
 
 !TODO: re-write this as a call to find, not ls
-      call execute_command_line('ls '//trim(self%path)//'/'//trim(self%basename)//&
-                                "*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile))
-      !print *,'ls '//trim(self%path)//'/'//trim(self%basename)//"*.h5 | sed -n 's/.*curved90-qv14\.//;s/\.h5//p' > "//trim(tmpfile)
+      call execute_command_line('find '//trim(self%path)//'/'//trim(self%basename)//&
+                                "*.h5 -printf '%f\n' | sed -n 's/.*"//trim(self%basename)//&
+                                "\.//;s/\.h5//p' > "//trim(tmpfile))
+      !print *,'find '//trim(self%path)//'/'//trim(self%basename)//"*.h5 -printf '%f\n' | sed -n 's/.*"//trim(self%basename)//"\.//;s/\.h5//p' > "//trim(tmpfile)
 
       open(newunit=u, file=tmpfile, action="read")
       i = 0

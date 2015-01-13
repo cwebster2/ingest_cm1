@@ -32,10 +32,6 @@ module ingest_cm1_hdf5
          integer(HID_T) :: file_id
          logical :: manage_hdf
       contains
-         !private
-         !procedure, pass(self) :: initiate_hdf
-         !procedure, pass(self) :: deinitiate_hdf
-
          procedure, pass(self) :: get_times
          procedure, pass(self) :: scan_hdf
          procedure, public ,pass(self) :: getVarByName => getVarByName_hdf5
@@ -48,29 +44,37 @@ module ingest_cm1_hdf5
 
          procedure, private, pass(self) :: read3DDerived
 
-         !TODO: finalization needs gfortran 4.9 or ifort
-         !!!final :: final_cm1
+         !TODO: abstract this into a makefile.in macro or something (autotools?)
+#if (defined(__GFORTRAN__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR > 8))) || defined(__INTEL_COMPILER)
+         final :: final_cm1
+#endif
    end type cm1_hdf5
 
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+  ! This function is split from the main HDF code to handle the case that this
+  ! library is used within a program that also makes use of HDF.  The HDF library
+  ! is not friendly to multiple open/close operations, so we only want to call
+  ! them if the program calling the library allows it.
+  
    subroutine initiate_hdf()
       implicit none
       integer :: h5err
 
-!      call cm1log(LOG_DEBUG, 'initiate_hdf', 'Initializing HDF5 library')
       call h5open_f(h5err)
    end subroutine initiate_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+   ! This function is split from the main HDF code to handle the case that this
+   ! library is used within a program that also makes use of HDF.  The HDF library
+   ! is not friendly to multiple open/close operations, so we only want to call
+   ! them if the program calling the library allows it.
+ 
    subroutine deinitiate_hdf()
       implicit none
       integer :: h5err
 
-!      call cm1log(LOG_DEBUG, 'deinitiate_hdf', 'De-initializing HDF5 library')
       call h5close_f(h5err)
    end subroutine deinitiate_hdf
 

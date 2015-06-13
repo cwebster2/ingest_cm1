@@ -26,7 +26,9 @@ Future output format support is expected for NetCDF4 and native MPI tiled HDF ou
 
 ## GETTING THE SOFTWARE ##
 
-    $ git clone https://github.com/cwebster2/ingest_cm1.git
+Download a current snapshot of ingest_cm1 with:
+
+    git clone https://github.com/cwebster2/ingest_cm1.git
 
 ## INSTALLING ##
 
@@ -34,7 +36,33 @@ A Fortran 2003 compiler is required to build this software.  If using GNU `gfort
 use of version 4.8 or later is required due to the use of allocatable arrays of 
 polymorphic types.  Intel `ifort` should work but is untested, as are other fortran compilers.
 
-    $ cd ingest_cm1/src; make
+IngestCM1 uses cmake to generate makefiles and you have a few options when building.  The default
+options are to build a static library without HDF5 support and install into ingest_cm1's directory.
+To use this default, from the ingest_cm1 directory, do:
+
+    cmake .
+
+To enable HDF5 support, use:
+
+    HDF5_ROOT="/path/to/hdf5" cmake . -DWITH_HDF5=1
+
+If your HDF5 library is built with cmake support, you can try this instead:
+
+    cmake . -DWITH_HDF5_CMAKE
+
+To build a shared library instead of a static library, add the flag `-DBUILD_SHARED_LIBS=1` flag to cmake and
+to change the installation location, e.g. /usr/local, use `-DCMAKE_INSTALL_PREFIX:PATH=/usr/local`.  An example
+of all of the above is:
+
+    HDF5_ROOT="/path/to/hdf5" cmake . -DWITH_HDF5=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_PREFIX:PATH=/usr
+
+which will generate makefiles to build a shared library, install into /usr/lib and /usr/include and
+include HDF5 support.
+
+To build and install ingest_cm1 do:
+
+    make
+    make install
 
 ## USING ##
 

@@ -4,7 +4,7 @@
 # GNU Fortran build options.  Requires gcc >= 4.8
 FC=gfortran
 CC=gcc
-FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none
+FFLAGS= -std=f2008 -Wall -march=native -O2 -fimplicit-none -fcheck-array-temporaries
 
 # Intel compiler -----------------------------------------
 # Intel Fortran build options.
@@ -56,8 +56,8 @@ tags: ingest_cm1.f90
 	etags -R *.f90
 
 
-#doc:
-#	doxygen ../Doxygen.conf
+doc:
+	doxygen ../Doxygen.conf
 
 %.o: %.F90
 	$(FC) -cpp $(FFLAGS) ${HDFFLAGS} $(HDFINC) -c $<

@@ -43,8 +43,10 @@ module ingest_cm1_hdf5
          procedure, public ,pass(self) :: read2DMult => read2DMult_hdf5
 
          procedure, private, pass(self) :: read3DDerived
-
+!         procedure, pass(self) :: final_cm1
+         
          !TODO: abstract this into a makefile.in macro or something (autotools?)
+         !TODO: require a minimum version of ifort
 #if (defined(__GFORTRAN__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR > 8))) || defined(__INTEL_COMPILER)
          final :: final_cm1
 #endif
@@ -424,15 +426,16 @@ contains
   end function scan_hdf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58175
 
-!   subroutine final_cm1(self)
-!      implicit none
-!      type(cm1) :: self
-!      integer :: stat
-!
-!      stat = close_cm1(self)
-!
-!   end subroutine final_cm1
+  subroutine final_cm1(cm1hdf5)
+    implicit none
+    type(cm1_hdf5) :: cm1hdf5
+    integer :: stat
+    
+    stat = cm1hdf5%close_cm1()
+
+  end subroutine final_cm1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

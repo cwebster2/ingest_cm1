@@ -9,10 +9,10 @@ if (NOT CMAKE_BUILD_TYPE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # default installation
-get_filename_component (default_prefix "." ABSOLUTE)
-set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING
-      "Choose the installation directory; by default it installs in the ingest-cm1 directory."
-      FORCE)
+#get_filename_component (default_prefix "." ABSOLUTE)
+#set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING
+#      "Choose the installation directory; by default it installs in the ingest-cm1 directory."
+#      FORCE)
 
 
 #set (INGESTCM1_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
@@ -21,7 +21,11 @@ get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   # gfortran
-  set (CMAKE_Fortran_FLAGS_RELEASE "-march=native -pipe -O2")
+  if (APPLE)
+    set (CMAKE_Fortran_FLAGS_RELEASE "-pipe -O2")
+  else()
+    set (CMAKE_Fortran_FLAGS_RELEASE "-march=native -pipe -O2")
+  endif()
   set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -ggdb")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)

@@ -58,6 +58,7 @@ endif (WITH_HDF5_CMAKE)
 
 
 add_subdirectory(src)
+add_subdirectory(bin)
 
 #http://www.cmake.org/Wiki/CMakeForFortranExample
 #http://stackoverflow.com/questions/2186110/cmake-tutorial

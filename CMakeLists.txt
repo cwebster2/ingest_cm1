@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(ingest_cm1 Fortran)
 
+include (GNUInstallDirs)
+
 # make sure that the default is a RELEASE
 if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE RELEASE CACHE STRING

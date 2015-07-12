@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 #####################################################################
 #
@@ -30,15 +30,18 @@ import re
 import h5py
 import numpy as np
 import sys
+import multiprocessing as mp
 
 def main():
    parser = argparse.ArgumentParser()
    parser.add_argument( '-d', '--dset', dest='dsetname', required=True, help="Dataset base name")
    parser.add_argument( '-p', '--path', dest='dsetpath', required=True, help="Path to HDF5 cdirs.")
+   parser.add_argument( '-n', '--np', dest='num_p', required=False, default=1, help="Number of parallel tasks to spawn")
    args = parser.parse_args()
 
    dsetname = args.dsetname
    dsetpath = args.dsetpath
+   num_p = int(args.num_p)
 
    dirmatch = "{0}.*.cdir".format(os.path.join(dsetpath,dsetname))
    print("\nCombine HDF inovked for {0}\n".format(dirmatch))
@@ -56,12 +59,27 @@ def main():
          time = m.groups()[0]
          times.append((time, fname))
 
+   if (num_p <= 1):
+      serial_work(times, dsetname)
+   else:
+      processes = [mp.Process(target=parallel_work, args=(x,num_p,times,dsetname,)) for x in range(num_p)]
+      for p in processes:
+        p.start()
+      for p in processes:
+        p.join()
+
+def serial_work(times, dsetname):
    for time in times:
-      process_time(time, dsetname)
+      process_time(1, time, dsetname)
+    
+
+def parallel_work(proc, num_p, times, dsetname):
+   for time in times[proc::num_p]:
+      process_time(proc, time, dsetname)
 
 
-def process_time(time, dsetname):
-   print("Processing time {0} in {1}".format(time[0],time[1]))
+def process_time(proc, time, dsetname):
+   print("[{2:02d}]: Processing time {0} in {1}".format(time[0],time[1], proc))
 
    fnames = glob.glob("{0}/*.cm1hdf5".format(time[1]))
 

@@ -92,11 +92,11 @@ def process_time(proc, time, dsetname):
         files[int(m.groups()[0])] = fname
         h5files[int(m.groups()[0])] = h5py.File(fname, 'r+')
 
-   print("  Found cm1hdf5 fileset for time {0}".format(time[0]))
-   for file in files:
-      print("    {0}".format(os.path.basename(file)))
+#   print("  Found cm1hdf5 fileset for time {0}".format(time[0]))
+#   for file in files:
+#      print("    {0}".format(os.path.basename(file)))
    
-   print("  Reading metadata from file 0")
+#   print("  Reading metadata from file 0")
    dsettime = int(h5files[0]['/time'][()])
    nodex = int(h5files[0]['/grid/nodex'][()])
    nodey = int(h5files[0]['/grid/nodey'][()])
@@ -106,15 +106,15 @@ def process_time(proc, time, dsetname):
    ni = int(h5files[0]['/grid/ni'][()])
    nj = int(h5files[0]['/grid/nj'][()])
    
-   print("    Dataset time {0}".format(dsettime))
-   print("    MPI NODES ({0},{1})".format(nodex,nodey))
-   print("    Dataset dimensions ({0}, {1}, {2})".format(nx,ny,nz))
+#   print("    Dataset time {0}".format(dsettime))
+#   print("    MPI NODES ({0},{1})".format(nodex,nodey))
+#   print("    Dataset dimensions ({0}, {1}, {2})".format(nx,ny,nz))
 
    outfname = os.path.join(os.path.dirname(time[1]),"{0}.{1}.h5".format(dsetname,time[0]))
-   print("  Initializing output file: {0}".format(outfname))
+#   print("  Initializing output file: {0}".format(outfname))
    outfile = h5py.File(outfname, 'w')
    
-   print("  Copying metadata, grids, meshes and basestate...",end='')
+#   print("  Copying metadata, grids, meshes and basestate...",end='')
    #===================================================================
    grid = outfile.create_group('/grid')
    mesh = outfile.create_group('/mesh')
@@ -179,15 +179,15 @@ def process_time(proc, time, dsetname):
    outfile['/mesh/zf'] = zf
    copy_attrs(h5files[0], outfile, '/mesh/zf')
 
-   print("Done")
+#   print("Done")
 
    #===================================================================
    # Process 2D datasets
-   print("  2D datasets...",end='')
+#   print("  2D datasets...",end='')
 
    from2d = h5files[0]['/2d']
    for name in from2d:
-      print("{0}...".format(name),end='')
+#      print("{0}...".format(name),end='')
 
       ds2d = np.zeros((ny,nx), np.float32)
       dset = "/2d/{0}".format(name)
@@ -203,15 +203,15 @@ def process_time(proc, time, dsetname):
       copy_attrs(h5files[0], outfile, dset)
 
 
-   print("Done")
+#   print("Done")
    #===================================================================
    # Process 3D basestate
-   print("  3D base state datasets...",end='')
+#   print("  3D base state datasets...",end='')
    sys.stdout.flush()
 
    from3d = h5files[0]['/3d_basestate']
    for name in from3d:
-      print("{0}...".format(name),end='')
+#      print("{0}...".format(name),end='')
       sys.stdout.flush()
       dset = "/3d_basestate/{0}".format(name)
       (mynz, mynj, myni) = from3d[name].shape
@@ -236,15 +236,15 @@ def process_time(proc, time, dsetname):
       copy_attrs(from3d, to3d, name)
 
 
-   print("Done")
+#   print("Done")
    #===================================================================
    # Process 3D datasets
-   print("  3D datasets...",end='')
+#   print("  3D datasets...",end='')
    sys.stdout.flush()
 
    from3d = h5files[0]['/3d']
    for name in from3d:
-      print("{0}...".format(name),end='')
+#      print("{0}...".format(name),end='')
       sys.stdout.flush()
       dset = "/3d/{0}".format(name)
       (mynz, mynj, myni) = from3d[name].shape
@@ -276,15 +276,15 @@ def process_time(proc, time, dsetname):
 #TODO: allow user to specify which datasets to copy
 #TODO: allow user to specift slice to copy instead of whole dataset
 
-   print("Done")
+#   print("Done")
    #===================================================================
 
 
    #===================================================================
-   print("  Closing input files")
+#   print("  Closing input files")
    for h5file in h5files:
       h5file.close()
-   print("  Closing output files")
+#   print("  Closing output files")
    outfile.close()
 
 #======================================================================

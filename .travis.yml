@@ -1,0 +1,19 @@
+language: c
+
+env:
+        global:
+                - FC=gfortran
+                - HDF_ROOT="/usr"
+
+addons:
+        apt:
+                packages:
+                - cmake
+                - gfortran
+                - libhdf5-openmpi-dev
+
+before_script:
+        - cmake . -DWITH_HDF5=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_PREFIX:PATH=/usr
+
+script: make
+        

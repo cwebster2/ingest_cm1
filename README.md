@@ -1,5 +1,7 @@
 # Ingest_cm1 #
 
+[![Build Status](https://travis-ci.org/cwebster2/ingest_cm1.svg?branch=master)](https://travis-ci.org/cwebster2/ingest_cm1)
+
 ## README ##
 
 Ingest_cm1 is a Fortran module to abstract access to model output 

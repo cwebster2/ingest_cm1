@@ -10,29 +10,22 @@ if (NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
-# default installation
-#get_filename_component (default_prefix "." ABSOLUTE)
-#set (CMAKE_INSTALL_PREFIX ${default_prefix} CACHE STRING
-#      "Choose the installation directory; by default it installs in the ingest-cm1 directory."
-#      FORCE)
-
-
-#set (INGESTCM1_LIB_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 # FFLAGS depend on the compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   # gfortran
   if (APPLE)
-    set (CMAKE_Fortran_FLAGS_RELEASE "-pipe -O2")
+    set (CMAKE_Fortran_FLAGS_RELEASE "-std=f2008 -pipe -O2")
   else()
-    set (CMAKE_Fortran_FLAGS_RELEASE "-march=native -pipe -O2")
+    set (CMAKE_Fortran_FLAGS_RELEASE "-std=f2008 -march=native -pipe -O2")
   endif()
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -ggdb")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-std=f2008 -O0 -ggdb -g3 -fbacktrace -Wall -Wextra
+  -pedantic -fsanitize=undefined -fsanitize=address -fsanitize=leak -fcheck=all")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)
-  set (CMAKE_Fortran_FLAGS_RELEASE "-xhost -O2")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-stand f08 -xhost -O2")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-stand f08 -O0 -g")
 else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   # default
   message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})

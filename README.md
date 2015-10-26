@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/cwebster2/ingest_cm1.svg?branch=master)](https://travis-ci.org/cwebster2/ingest_cm1)
 
+
+
 ## README ##
 
 Ingest_cm1 is a Fortran module to abstract access to model output 
@@ -26,11 +28,26 @@ NOTE: Support for the native tiled output is not yet implemented.  You must unti
 
 Future output format support is expected for NetCDF4 and native MPI tiled HDF output.
 
+
+* [Getting](#getting-the-software)
+* [Installing](#installing)
+* [Using](#using)
+  - [The cm1_dataset front-end](#The-cm1_dataset-front-end)
+    + [Open_dataset](#open_dataset)
+    + [Close_dataset](#close_dataset)
+    + [Reading data](#Reading-data)
+    + [Accessing grid information](#Accessing_grid_information)
+* [Contributing](#contributing)
+* [Author](#author)
+* [License](#license)
+
+
 ## GETTING THE SOFTWARE ##
 
 Download a current snapshot of ingest_cm1 with:
 
     git clone https://github.com/cwebster2/ingest_cm1.git
+
 
 ## INSTALLING ##
 
@@ -45,6 +62,10 @@ To use this default, from the ingest_cm1 directory, do:
     cmake .
 
 To enable HDF5 support, use:
+
+    cmake . -DWITH_HDF5=1
+
+If your HDF5 library is not found, you can specify a search path with the `HDF5_ROOT` environment variable.
 
     HDF5_ROOT="/path/to/hdf5" cmake . -DWITH_HDF5=1
 
@@ -68,10 +89,14 @@ To build and install ingest_cm1 do:
 
 ## USING ##
 
-The cm1_dataset type is the public documented API, but feel free to use the 
-particular backend classes directly if so included. 
+### The cm1_dataset front end ###
 
-### open_dataset ###
+The cm1_dataset front-end is able to load a dataset with multiple grids spread across multiple files.
+This paradigm assumes the output style of CM1 where there are 4 grids each for scalar, u, v, and w
+variables. Within each grid the output may be a single file per timestep, a single file for all timesteps
+or a file for each MPI rank at each timestep.  This is defined by the `dsettype` variable below.
+
+#### open_dataset ####
 
 ```fortran
 integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey)
@@ -83,11 +108,11 @@ integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nod
    integer, optional :: nodex, nodey
 ```
 This opens the dataset located at `dsetpath` with basename `dsetbasename`.  
-`dsettype` is one of `GRADS`, `GRADSMPI` or `HDF`.
-`grids` is an array of grids to open, e.g. ['s', 'u', 'v', 'w'] for a full dataset or ['s'] if only the scalar grid is desired.
+`dsettype` is one of `GRADS`, `GRADSMPI`, `GRADSSINGLE`, or `HDF`.
+`grids` is an array of grids to open, e.g. `['s', 'u', 'v', 'w']` for a full dataset or `['s']` if only the scalar grid is desired.
 The variables `nodex` and `nodey` are only used for the `GRADSMPI` dsettype.  These are the same values used in the namelist.input for the MPI run.
 
-### close_dataset ###
+#### close_dataset ####
 
 ```fortran
 integer function close_dataset(self)
@@ -95,7 +120,9 @@ integer function close_dataset(self)
 ```
 This closes the dataset.
 
-### read_3d and read_2d ###
+#### Reading data ####
+
+You can read a 3d grid using the `read_3d` function:
 
 ```fortran
 integer function read_3d(self, time, grid, varname, Field3D)
@@ -106,9 +133,11 @@ integer function read_3d(self, time, grid, varname, Field3D)
    character(len=*)   :: varname
    real, dimension(:,:,:) :: Field3D
 ```
-These read a 2/3D variable `varname` from grid `grid` at time `time`.
+These read a 2/3D variable `varname` from grid `grid` at time `time`.  To read 2D variables,
+use the similar function `read_2d`.
 
-### get_nx, get_ny, get_nz ###
+#### Accessing data ####
+##### get_nx, get_ny, get_nz #####
 
 ```fortran
 integer function get_nx(self, grid)
@@ -118,7 +147,7 @@ integer function get_nx(self, grid)
 ```
 These get dimensions of the specified grid `grid`.
 
-### get_x, get_y, get_z ###
+##### get_x, get_y, get_z #####
 
 ```fortran
 integer function get_x(self, grid, x)

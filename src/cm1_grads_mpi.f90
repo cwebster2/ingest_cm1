@@ -32,8 +32,8 @@ module ingest_cm1_grads_mpi
           procedure, pass(self) :: cm1_set_nodes => cm1_set_nodes_grads_mpi
           procedure, pass(self) :: read3DXYSlice => read3DXYSlice_grads_mpi
           procedure, public ,pass(self) :: open_cm1 => open_cm1_grads_mpi
-          procedure, public ,pass(self) :: readMultStart => readMultStart_grads_mpi
-          procedure, public ,pass(self) :: readMultStop => readMultStop_grads_mpi
+          procedure, public ,pass(self) :: open_dataset_time => open_dataset_time_grads_mpi
+          procedure, public ,pass(self) :: close_dataset_time => close_dataset_time_grads_mpi
  
           ! This ensures that the filehandles and arrays are closed if the variable goes out of     scope
           !TODO: finalization needs gfortran 4.9 or ifort
@@ -54,7 +54,7 @@ contains
       integer, optional :: nodex, nodey
       logical, optional :: hdfmanage
 
-      if (self%isopen) then
+      if (self%is_dataset_open) then
          call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
@@ -81,7 +81,7 @@ contains
       open_cm1 = self%read_ctl()
       self%nunits = self%cm1_set_nodes(nodex,nodey)
       allocate(self%dat_units(self%nunits))
-      self%isopen = .true.
+      self%is_dataset_open = .true.
 
    end function open_cm1_grads_mpi
 
@@ -108,9 +108,9 @@ contains
       real, allocatable, dimension(:,:) :: nodeslice
       integer :: nf, si, sj, i, j
 
-      if (.not. self%check_open('read3DXYSlice')) then
-         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
-         read3DXYSlice = 0
+      read3DXYSlice = 0
+      if (.not. self%check_dataset_open('read3DXYSlice')) then
+         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No dataset open, aborting')
          return
       end if
 
@@ -150,7 +150,8 @@ contains
              end do
              end do
            case default
-             call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'Unsupported MPI grid, something bad happened.')
+              call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'Unsupported MPI grid, something bad happened.')
+              stop
         end select
 
       end do
@@ -161,68 +162,65 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStart_grads_mpi(self,time) result(readMultStart)
+   integer function open_dataset_time_grads_mpi(self,time) result(open_dataset_time)
       implicit none
-      class(cm1_grads_mpi)          :: self
+      class(cm1_grads_mpi) :: self
       integer, intent(in) :: time
       character(len=6) :: dtime
       character(len=256) :: datfile
       integer :: fu
       character(len=6) :: node
 
-      if (.not. self%check_open('read3DMultStart')) then
-         readMultStart = 0
-         return
-      end if
+      open_dataset_time = 0
+      if (.not. self%check_dataset_open('open_dataset_time')) return
 
-      if (self%ismult) then
-         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
-         readMultStart = 0
-         return
+      if (self%is_time_open) then
+         call self%cm1log(LOG_ERROR, 'open_dataset_time', 'Internal Error: inconsistent timelevels')
+         stop
       end if
 
       505 format(I6.6)
       if (self%nodex == 0 .or. self%nodey == 0) then
-         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Need to set nodex and nodey')
-         readMultStart = 0
-         self%ismult = .false.
-         return
+         call self%cm1log(LOG_WARN, 'open_dataset_time', 'Need to set nodex and nodey, aborting')
+         stop
       endif
+
       write(dtime,505) time
       do fu=0, self%nodex*self%nodey-1
          write(node,505) fu
          datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(node)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-         call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
+         call self%cm1log(LOG_MSG, 'open_dataset_time', 'Opening: '//trim(datfile))
 
          ! open dat file
          open(newunit=self%dat_units(fu+1),file=datfile,form='unformatted',access='direct',recl=self%mpireclen,status='old')
       end do
-      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
-      readMultStart = 1
-      self%ismult = .true.
+      call self%cm1log(LOG_MSG, 'open_dataset_time', 'Multiread started for time: '//trim(dtime))
+      open_dataset_time = 1
+      self%time_open = time
+      self%is_time_open = .true.
 
-   end function readMultStart_grads_mpi
+    end function open_dataset_time_grads_mpi
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStop_grads_mpi(self) result(readMultStop)
+   integer function close_dataset_time_grads_mpi(self) result(close_dataset_time)
       implicit none
       class(cm1_grads_mpi) :: self
       integer :: fu
 
-      if ((.not. self%check_open('readMultStop')) .or. (.not. self%check_mult('readMultStop'))) then
-         readMultStop = 0
-         return
-      end if
+      close_dataset_time = 0
+      if ((.not. self%check_dataset_open('close_dataset_time')) .or. &
+           (.not. self%check_time_open('close_dataset_time'))) return
 
       do fu=1, self%nodex*self%nodey
          close(self%dat_units(fu))
       end do
-      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
-      readMultStop = 1
-      self%ismult = .false.
+      call self%cm1log(LOG_MSG, 'close_dataset_Time', 'Timelevel closed for reading')
+      close_dataset_time = 1
+      self%time_open = -1
+      self%is_time_open = .false.
 
-   end function readMultStop_grads_mpi
+    end function close_dataset_time_grads_mpi
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

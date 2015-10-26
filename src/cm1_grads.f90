@@ -36,10 +36,10 @@ module ingest_cm1_grads
          procedure, pass(self) :: read3DXYSlice => read3DXYSlice_grads
          procedure, public ,pass(self) :: open_cm1 => open_cm1_grads
          procedure, public ,pass(self) :: close_cm1 => close_cm1_grads
-         procedure, public ,pass(self) :: readMultStart => readMultStart_grads
-         procedure, public ,pass(self) :: readMultStop => readMultStop_grads
-         procedure, public ,pass(self) :: read3DMult => read3DMult_grads
-         procedure, public ,pass(self) :: read2DMult => read2DMult_grads
+         procedure, public ,pass(self) :: open_dataset_time => open_dataset_time_grads
+         procedure, public ,pass(self) :: close_dataset_time => close_dataset_time_grads
+         procedure, public ,pass(self) :: read3D_at_time => read3D_at_time_grads
+         procedure, public ,pass(self) :: read2D_at_time => read2D_at_time_grads
 
          ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
          !TODO: finalization needs gfortran 4.9 or ifort
@@ -62,8 +62,8 @@ contains
       integer, optional :: nodex, nodey
       logical, optional :: hdfmanage
 
-      if (self%isopen) then
-         call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
+      if (self%is_dataset_open) then
+         call self%cm1log(LOG_ERROR, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
       end if
@@ -83,7 +83,7 @@ contains
       open_cm1 = self%read_ctl()
       self%nunits = 1
       allocate(self%dat_units(self%nunits))
-      self%isopen = .true.
+      self%is_dataset_open = .true.
 
    end function open_cm1_grads
 
@@ -198,14 +198,12 @@ contains
       class(cm1_grads) :: self
 
       ! Check if the dataset is open
-      if (.not. self%check_open('close_cm1')) then
-         close_cm1 = 0
-         return
-      end if
+      close_cm1 = 0
+      if (.not. self%check_dataset_open('close_cm1')) return
 
       ! If data files are open, close them
-      if (self%ismult) then
-         close_cm1 = self%readMultStop()
+      if (self%is_time_open) then
+         close_cm1 = self%close_dataset_time()
       end if
 
       deallocate(self%x)
@@ -220,7 +218,7 @@ contains
       self%nt = 0
       self%nv = 0
 
-      self%isopen = .false.
+      self%is_dataset_open = .false.
       close_cm1 = 1
       call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed:')
 
@@ -235,8 +233,8 @@ contains
       real, dimension(self%nx,self%ny) :: slice
       integer :: idx
 
-      if (.not. self%check_open('read3DXYSlice')) then
-         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
+      if (.not. self%check_dataset_open('read3DXYSlice')) then
+         call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No dataset open, aborting')
          read3DXYSlice = 0
          return
       end if
@@ -257,123 +255,120 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStart_grads(self,time) result(readMultStart)
-      implicit none
-      class(cm1_grads)          :: self
-      integer, intent(in) :: time
-      character(len=6) :: dtime
-      character(len=256) :: datfile
-
-      if (.not. self%check_open('read3DMultStart')) then
-         readMultStart = 0
-         return
-      end if
-
-      if (self%ismult) then
-         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
-         readMultStart = 0
-         return
-      end if
-
-      505 format(I6.6)
-      ! filename?
-      write(dtime,505) time
-      datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(dtime)//'_'//self%grid//'.dat'
-      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening: '//trim(datfile))
-
-      ! TODO: check if time is in times for vailidy
-      !       Make sure file successfully opens!
-
-      ! open dat file
-      open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
-
-      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
-      readMultStart = 1
-      self%ismult = .true.
-
-   end function readMultStart_grads
+   integer function open_dataset_time_grads(self,time) result(open_dataset_time)
+     implicit none
+     class(cm1_grads)          :: self
+     integer, intent(in) :: time
+     character(len=6) :: dtime
+     character(len=256) :: datfile
+     
+     open_dataset_time = 0
+     if (.not. self%check_dataset_open('open_dataset_time')) return
+     
+     if (self%is_time_open) then
+        call self%cm1log(LOG_ERROR, 'open_dataset_time', 'Internal Error: different timelevel is already open')
+        stop
+     end if
+     
+     ! filename?
+     write(dtime,'(I6.6)') time
+     datfile = trim(self%path)//'/'//trim(self%basename)//'_'//trim(dtime)//'_'//self%grid//'.dat'
+     call self%cm1log(LOG_MSG, 'open_dataset_time', 'Opening: '//trim(datfile))
+     
+     ! TODO: check if time is in times for vailidy
+     !       Make sure file successfully opens!
+     
+     ! open dat file
+     open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
+     
+     call self%cm1log(LOG_MSG, 'open_dataset_time', 'Timelevel open for reading: '//trim(dtime))
+     open_dataset_time = 1
+     self%time_open = time
+     self%is_time_open = .true.
+     
+   end function open_dataset_time_grads
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStop_grads(self) result(readMultStop)
-      implicit none
-      class(cm1_grads) :: self
-
-      if ((.not. self%check_open('readMultStop')) .or. (.not. self%check_mult('readMultStop'))) then
-         readMultStop = 0
-         return
-      end if
-
-      close(self%dat_units(1))
-      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
-      readMultStop = 1
-      self%ismult = .false.
-
-   end function readMultStop_grads
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   integer function read2DMult_grads(self, varname, Field2D) result(read2DMult)
-      implicit none
-      class(cm1_grads) :: self
-      character(len=*), intent(in) :: varname
-      real, dimension(self%nx,self%ny) :: Field2D
-      integer :: varid,status
-
-      if ((.not. self%check_open('read2DMult')) .or. (.not. self%check_mult('read2DMult'))) then
-         read2DMult = 0
-         return
-      end if
-
-      ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
-      if (varid.eq.0) then
-         call self%cm1log(LOG_MSG, 'read2DMult', 'Variable not found: '//trim(varname))
-         read2DMult = 0
-         return
-      end if
-
-      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      status = self%read3DXYSlice(varid, 0, Field2D(:,:))
-
-      read2DMult = 1
-
-   end function read2DMult_grads
+   integer function close_dataset_time_grads(self) result(close_dataset_time)
+     implicit none
+     class(cm1_grads) :: self
+     
+     close_dataset_time = 0
+     if ((.not. self%check_dataset_open('close_dataset_time')) .or. &
+          (.not. self%check_time_open('close_dataset_time'))) return
+     
+     close(self%dat_units(1))
+     call self%cm1log(LOG_MSG, 'close_dataset_time', 'Timelevel closed for reading')
+     close_dataset_time = 1
+     self%time_open = -1
+     self%is_time_open = .false.
+     
+   end function close_dataset_time_grads
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read3DMult_grads(self, varname, Field3D) result(read3DMult)
-      implicit none
-      class(cm1_grads) :: self
-      character(len=*), intent(in) :: varname
-      real, dimension(self%nx,self%ny,self%nz) :: Field3D
-      integer :: k,varid,status
+   integer function read2D_at_time_grads(self, varname, Field2D) result(read2D_at_time)
+     implicit none
+     class(cm1_grads) :: self
+     character(len=*), intent(in) :: varname
+     real, dimension(self%nx,self%ny) :: Field2D
+     integer :: varid,status
+     
+     read2D_at_time = 0
+     if ((.not. self%check_dataset_open('read2D_at_time')) .or. &
+          (.not. self%check_time_open('read2D_at_time'))) return
+     
+     ! Does the variable exist in this dataset?
+     varid = self%get_var_byname(varname)
+     if (varid == 0) then
+        call self%cm1log(LOG_MSG, 'read2D_at_time', 'Variable not found: '//trim(varname))
+        return
+     end if
+     
+     call self%cm1log(LOG_INFO, 'read2D_at_time', 'Reading: '//trim(varname))
+     ! Read the variable from the dataset
+     status = self%read3DXYSlice(varid, 0, Field2D(:,:))
+     
+     read2D_at_time = status
+     
+   end function read2D_at_time_grads
 
-      ! Is the dataset open (has the ctl file been scanned)
-      ! Is the dataset open for reading (is the dat file open)
-      if ((.not. self%check_open('read3DMult')) .or. (.not. self%check_mult('read3DMult'))) then
-         read3DMult = 0
-         return
-      end if
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
-      if (varid.eq.0) then
-         call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
-         read3DMult = 0
-         return
-      end if
-
-      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
-      ! Read the variable from the dataset
-      do k = 1,self%nz
-         status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
-      end do
-
-      read3DMult = 1
-
-   end function read3DMult_grads
+   integer function read3D_at_time_grads(self, varname, Field3D) result(read3D_at_time)
+     implicit none
+     class(cm1_grads) :: self
+     character(len=*), intent(in) :: varname
+     real, dimension(self%nx,self%ny,self%nz) :: Field3D
+     integer :: k,varid,status
+     
+     ! Is the dataset open (has the ctl file been scanned)
+     ! Is the dataset open for reading (is the dat file open)
+     read3D_at_time = 0
+     if ((.not. self%check_dataset_open('read3D_at_time')) .or. &
+          (.not. self%check_time_open('read3D_at_time'))) return
+     
+     ! Does the variable exist in this dataset?
+     varid = self%get_var_byname(varname)
+     if (varid.eq.0) then
+        call self%cm1log(LOG_WARN, 'read3D_at_time', 'Variable not found: '//trim(varname))
+        return
+     end if
+     
+     call self%cm1log(LOG_INFO, 'read3D_at_time', 'Reading: '//trim(varname))
+     ! Read the variable from the dataset
+     do k = 1,self%nz
+        status = self%read3DXYSlice(varid, k, Field3D(:,:,k))
+        if (status == 0) then
+           call self%cm1log(LOG_ERROR, 'read3D_at_time', 'Error reading variable, aborting')
+           return
+        end if
+     end do
+     
+     read3D_at_time = status
+     
+   end function read3D_at_time_grads
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

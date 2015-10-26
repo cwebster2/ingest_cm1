@@ -51,6 +51,7 @@ module ingest_cm1_base
          ! Private procedures
          procedure, pass(self) :: check_dataset_open
          procedure, pass(self) :: check_time_open
+         procedure, pass(self) :: verify_time_open
          procedure, pass(self) :: cm1log
          procedure(open_dataset_time_i), deferred, public ,pass(self) :: open_dataset_time
          procedure(close_dataset_time_i), deferred, public ,pass(self) :: close_dataset_time
@@ -154,6 +155,47 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   logical function verify_time_open(self, funcname, time)
+     implicit none
+     class(cm1_base), intent(in) :: self
+     integer, intent(in) :: time
+     character(len=*), intent(in) :: funcname
+     logical :: needs_opening
+     integer :: status
+
+     verify_time_open = .false.
+     if (.not. self%check_dataset_open(funcname)) return
+
+     if (.not. self%is_time_open) then
+        needs_opening = .true.
+     else ! (is_timeopen)
+        if (time == self%time_open) then
+           needs_opening = .false.
+           verify_time_open = .true.
+        else ! time /= time_open
+           call self%cm1log(LOG_DEBUG, funcname, "Timelevel mismatch, closing old time to open new time")
+           status = self%close_dataset_time()
+           if (status == 0) then
+              call self%cm1log(LOG_ERROR, funcname, "Error closing old timelevel")
+              return
+           end if ! closing old timelevel failed
+        end if ! time == timeopen
+     end if ! not is_time_open
+
+     if (needs_opening) then
+        status = self%open_dataset_time(time)
+        if (status == 0) then
+           call self%cm1log(LOG_ERROR, funcname, "Error opening new timelevel")
+           return
+        else
+           verify_time_open = .true.
+        end if ! opening new timelevel failed
+     end if ! needs opening
+     
+   end function verify_time_open
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
    integer function read2D(self, varname, time, Field2D)
       implicit none
       class(cm1_base), intent(in)   :: self
@@ -162,35 +204,16 @@ contains
       real, dimension(self%nx,self%ny) :: Field2D
       integer :: status
 
-      if (.not. self%check_dataset_open('read2D')) then
-         read2D = 0
-         return
-      end if
-
-      status = self%open_dataset_time(time)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read2D', 'Data open failure, aborting: ')
-         read2D = 0
-         return
-      endif
+      read2D = 0
+      if (.not. self%verify_time_open('read2D', time)) return
 
       status = self%read2D_at_time(varname, Field2D)
       if (status.eq.0) then
          call self%cm1log(LOG_ERROR, 'read2D', 'Data read failure, aborting: ')
-         read2D = 0
-         status = self%close_dataset_time()
-         return
-      endif
-
-      status = self%close_dataset_time()
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read2D', 'Data close failure, aborting: ')
-         read2D = 0
          return
       endif
 
       read2D = 1
-
    end function read2D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -203,30 +226,12 @@ contains
       real, dimension(self%nx,self%ny,self%nz) :: Field3D
       integer :: status
 
-      if (.not. self%check_dataset_open('read3D')) then
-         read3D = 0
-         return
-      end if
-
-      status = self%open_dataset_time(time)
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read3D', 'Data open failure, aborting: ')
-         read3D = 0
-         return
-      endif
+      read3D = 0
+      if (.not. self%verify_time_open('read3D', time)) return
 
       status = self%read3D_at_time(varname, Field3D)
       if (status.eq.0) then
          call self%cm1log(LOG_ERROR, 'read3D', 'Data read failure, aborting: ')
-         read3D = 0
-         status = self%close_dataset_time()
-         return
-      endif
-
-      status = self%close_dataset_time()
-      if (status.eq.0) then
-         call self%cm1log(LOG_ERROR, 'read3D', 'Data close failure, aborting: ')
-         read3D = 0
          return
       endif
 
@@ -243,23 +248,19 @@ contains
       real, dimension(ib:ie, jb:je, kb:ke) :: Field3D
       integer :: status
       real, dimension(self%nx,self%ny,self%nz) :: Field3DFull
-      
-      if (.not. self%check_dataset_open('read3DSlice')) then
-         read3DSlice = 0
-         return
-      end if
+
+      read3DSlice = 0
+      if (.not. self%check_dataset_open('read3DSlice')) return
 
       if ((ib < 0) .or. (jb < 0) .or. (kb < 0) .or.  &
           (ie > self%nx) .or. (je > self%ny) .or. (ke > self%nz)) then
          call self%cm1log(LOG_ERROR, 'read3DSice', 'Slice out of bounds, aborting')
-         read3DSlice = 0
          return
       endif
  
       status = self%read3D(varname, time, Field3DFull)
       if (status.eq.0) then
          call self%cm1log(LOG_ERROR, 'read3DSice', 'Data read failure, aborting.')
-         read3DSlice = 0
          return
       endif
 
@@ -435,7 +436,7 @@ contains
 
       ! Is the dataset open for reading (is the dat file open)
       if (.not. self%is_time_open) then
-         call cm1log(self, LOG_ERROR, funcname, 'No multiread started, aborting')
+         call cm1log(self, LOG_ERROR, funcname, 'Internal Error: No timelevel is open.')
          check_time_open = .false.
          return
       end if

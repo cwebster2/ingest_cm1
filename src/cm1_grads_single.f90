@@ -27,8 +27,8 @@ module ingest_cm1_grads_single
       procedure, pass(self) :: read3DXYSlice => read3DXYSlice_grads_single
       procedure, public ,pass(self) :: open_cm1 => open_cm1_grads_single
       procedure, public ,pass(self) :: close_cm1 => close_cm1_grads_single
-      procedure, public ,pass(self) :: readMultStart => readMultStart_grads_single
-      procedure, public ,pass(self) :: readMultStop => readMultStop_grads_single
+      procedure, public ,pass(self) :: open_dataset_time => open_dataset_time_grads_single
+      procedure, public ,pass(self) :: close_dataset_time => close_dataset_time_grads_single
       
       ! This ensures that the filehandles and arrays are closed if the variable goes out of scope
       !TODO: finalization needs gfortran 4.9 or ifort
@@ -53,7 +53,7 @@ contains
       character(len=256) :: datfile
 
 
-      if (self%isopen) then
+      if (self%is_dataset_open) then
          call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
@@ -83,7 +83,7 @@ contains
 
       ! open dat file
       open(newunit=self%dat_units(1),file=datfile,form='unformatted',access='direct',recl=self%reclen,status='old')
-      self%isopen = .true.
+      self%is_dataset_open = .true.
 
    end function open_cm1_grads_single
 
@@ -104,15 +104,13 @@ contains
       implicit none
       class(cm1_grads_single) :: self
 
+      close_cm1 = 0
       ! Check if the dataset is open
-      if (.not. self%check_open('close_cm1')) then
-         close_cm1 = 0
-         return
-      end if
+      if (.not. self%check_dataset_open('close_cm1')) return
 
       ! If data files are open, close them
-      if (self%ismult) then
-         close_cm1 = self%readMultStop()
+      if (self%is_time_open) then
+         close_cm1 = self%close_dataset_time()
       end if
       close(self%dat_units(1))
       
@@ -128,7 +126,7 @@ contains
       self%nt = 0
       self%nv = 0
 
-      self%isopen = .false.
+      self%is_dataset_open = .false.
       close_cm1 = 1
       call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed:')
 
@@ -143,7 +141,7 @@ contains
       real, dimension(self%nx,self%ny) :: slice
       integer :: idx
 
-      if (.not. self%check_open('read3DXYSlice')) then
+      if (.not. self%check_dataset_open('read3DXYSlice')) then
          call self%cm1log(LOG_ERROR, 'read3DXYSlice', 'No datasef open, aborting')
          read3DXYSlice = 0
          return
@@ -165,21 +163,18 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStart_grads_single(self,time) result(readMultStart)
+   integer function open_dataset_time_grads_single(self,time) result(open_dataset_time)
       implicit none
       class(cm1_grads_single) :: self
       integer, intent(in) :: time
       character(len=6) :: dtime
 
-      if (.not. self%check_open('read3DMultStart')) then
-         readMultStart = 0
-         return
-      end if
+      open_dataset_time = 0
+      if (.not. self%check_dataset_open('open_dataset_time')) return
 
-      if (self%ismult) then
-         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
-         readMultStart = 0
-         return
+      if (self%is_time_open) then
+         call self%cm1log(LOG_WARN, 'open_dataset_time', 'Internal Error: timelevel inconsistency')
+         stop
       end if
 
       self%t = time
@@ -187,29 +182,29 @@ contains
       ! filename?
       write(dtime,505) self%t
       call self%cm1log(LOG_MSG, 'read3DMultStart', 'Multiread started for time: '//trim(dtime))
-      readMultStart = 1
-      self%ismult = .true.
+      open_dataset_time = 1
+      self%time_open = time
+      self%is_time_open = .true.
 
-
-   end function readMultStart_grads_single
+    end function open_dataset_time_grads_single
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStop_grads_single(self) result(readMultStop)
+   integer function close_dataset_time_grads_single(self) result(close_dataset_time)
       implicit none
       class(cm1_grads_single) :: self
 
-      if ((.not. self%check_open('readMultStop')) .or. (.not. self%check_mult('readMultStop'))) then
-         readMultStop = 0
-         return
-      end if
+      close_dataset_time = 0
+      if ((.not. self%check_dataset_open('close_dataset_time')) .or. &
+           (.not. self%check_time_open('close_dataset_time'))) return
 
       self%t = 0
       call self%cm1log(LOG_MSG, 'read3DMultStop', 'Multiread stopped.')
-      readMultStop = 1
-      self%ismult = .false.
+      close_dataset_time = 1
+      self%time_open = -1
+      self%is_time_open = .false.
 
-   end function readMultStop_grads_single
+    end function close_dataset_time_grads_single
 
 
 end module ingest_cm1_grads_single

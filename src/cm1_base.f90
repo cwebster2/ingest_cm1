@@ -166,15 +166,18 @@ contains
      verify_time_open = .false.
      if (.not. self%check_dataset_open(funcname)) return
 
-     if (.not. self%is_time_open) then
+     ! Cases - right time open, no time open, wrong time open.
+     
+     if (.not. self%is_time_open) then   ! no time is open
         needs_opening = .true.
-     else ! (is_timeopen)
-        if (time == self%time_open) then
+     else ! (is_timeopen)                ! a time is open
+        if (time == self%time_open) then ! The right time is open
            needs_opening = .false.
            verify_time_open = .true.
-        else ! time /= time_open
+        else ! time /= time_open         ! The wrong time is open
            call self%cm1log(LOG_DEBUG, funcname, "Timelevel mismatch, closing old time to open new time")
            status = self%close_dataset_time()
+           needs_opening = .true.
            if (status == 0) then
               call self%cm1log(LOG_ERROR, funcname, "Error closing old timelevel")
               return

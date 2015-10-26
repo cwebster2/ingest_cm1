@@ -35,11 +35,12 @@ Future output format support is expected for NetCDF4 and native MPI tiled HDF ou
   - [The cm1_dataset front-end](#The-cm1_dataset-front-end)
     + [Open_dataset](#open_dataset)
     + [Close_dataset](#close_dataset)
-    + [Reading data](#Reading-data)
-    + [Accessing grid information](#Accessing_grid_information)
-* [Contributing](#contributing)
-* [Author](#author)
-* [License](#license)
+    + [Reading data](#reading-data)
+    + [Accessing grid information](#accessing_grid_information)
+  - The backend classes
+* Contributing
+* Author
+* License
 
 
 ## GETTING THE SOFTWARE ##
@@ -136,7 +137,7 @@ integer function read_3d(self, time, grid, varname, Field3D)
 These read a 2/3D variable `varname` from grid `grid` at time `time`.  To read 2D variables,
 use the similar function `read_2d`.
 
-#### Accessing data ####
+#### Accessing grid information ####
 ##### get_nx, get_ny, get_nz #####
 
 ```fortran

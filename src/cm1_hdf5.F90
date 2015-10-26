@@ -34,15 +34,15 @@ module ingest_cm1_hdf5
       contains
          procedure, pass(self) :: get_times
          procedure, pass(self) :: scan_hdf
-         procedure, public ,pass(self) :: getVarByName => getVarByName_hdf5
+         procedure, public ,pass(self) :: get_var_byname => get_var_byname_hdf5
          procedure, public ,pass(self) :: open_cm1 => open_cm1_hdf5
          procedure, public ,pass(self) :: close_cm1 => close_cm1_hdf5
-         procedure, public ,pass(self) :: readMultStart => readMultStart_hdf5
-         procedure, public ,pass(self) :: readMultStop => readMultStop_hdf5
-         procedure, public ,pass(self) :: read3DMult => read3DMult_hdf5
-         procedure, public ,pass(self) :: read2DMult => read2DMult_hdf5
+         procedure, public ,pass(self) :: open_dataset_time => open_dataset_time_hdf5
+         procedure, public ,pass(self) :: close_dataset_time => close_dataset_time_hdf5
+         procedure, public ,pass(self) :: read3D_at_time => read3D_at_time_hdf5
+         procedure, public ,pass(self) :: read2D_at_time => read2D_at_time_hdf5
 
-         procedure, private, pass(self) :: read3DDerived
+         procedure, private, pass(self) :: read3D_derived
 !         procedure, pass(self) :: final_cm1
          
          !TODO: abstract this into a makefile.in macro or something (autotools?)
@@ -104,7 +104,7 @@ contains
       call self%cm1log(LOG_MSG, 'open_cm1', 'Opening HDF dataset')
       call self%cm1log(LOG_MSG, 'open_cm1', 'Grid ('//self%grid//') selected.')
 
-      if (self%isopen) then
+      if (self%is_dataset_open) then
          call self%cm1log(LOG_WARN, 'open_cm1', 'Already open, aborting')
          open_cm1 = 0
          return
@@ -124,9 +124,9 @@ contains
       call self%cm1log(LOG_MSG, 'open_cm1', 'Scanning HDF files.')
       open_cm1 = self%scan_hdf()
       if (open_cm1 .eq. 1) then
-         self%isopen = .true.
+         self%is_dataset_open = .true.
       else
-         self%isopen = .false.
+         self%is_dataset_open = .false.
       end if
 
    end function open_cm1_hdf5
@@ -139,8 +139,7 @@ contains
 !end subroutine execute_command_line
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! this is UGLY
-!TODO: is there a better way?
+!TODO: randomize the filename with C's "char* mkdtmp(char*)"  
 
    subroutine get_times(self)
       implicit none
@@ -149,11 +148,9 @@ contains
       integer :: u, i, reason
       real :: r
 
-!TODO: re-write this as a call to find, not ls
       call execute_command_line('find '//trim(self%path)//'/'//trim(self%basename)//&
                                 "*.h5 -printf '%f\n' | sed -n 's/.*"//trim(self%basename)//&
                                 "\.//;s/\.h5//p' > "//trim(tmpfile))
-      !print *,'find '//trim(self%path)//'/'//trim(self%basename)//"*.h5 -printf '%f\n' | sed -n 's/.*"//trim(self%basename)//"\.//;s/\.h5//p' > "//trim(tmpfile)
 
       open(newunit=u, file=tmpfile, action="read")
       i = 0
@@ -443,15 +440,13 @@ contains
       implicit none
       class(cm1_hdf5) :: self
 
+      close_cm1 = 0
       ! Check if the dataset is open
-      if (.not. self%check_open('close_cm1')) then
-         close_cm1 = 0
-         return
-      end if
+      if (.not. self%check_dataset_open('close_cm1')) return
 
       ! If data files are open, close them
-      if (self%ismult) then
-         close_cm1 = self%readMultStop()
+      if (self%is_time_open) then
+         close_cm1 = self%close_dataset_time()
       end if
 
       deallocate(self%x)
@@ -465,7 +460,7 @@ contains
       self%nt = 0
       self%nv = 0
 
-      self%isopen = .false.
+      self%is_dataset_open = .false.
       if (self%manage_hdf) call deinitiate_hdf
       close_cm1 = 1
       call self%cm1log(LOG_MSG, 'close_cm1', 'Dataset closed')
@@ -474,22 +469,19 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStart_hdf5(self,time) result(readMultStart)
+   integer function open_dataset_time_hdf5(self,time) result(open_dataset_time)
       implicit none
       class(cm1_hdf5)     :: self
       integer, intent(in) :: time
       character(len=5) :: dtime
       character(len=256) :: datfile
 
-      if (.not. self%check_open('read3DMultStart')) then
-         readMultStart = 0
-         return
-      end if
+      open_dataset_time = 0
+      if (.not. self%check_dataset_open('open_dataset_time')) return
 
-      if (self%ismult) then
-         call self%cm1log(LOG_WARN, 'read3DMultStart', 'Multiread already started, aborting')
-         readMultStart = 0
-         return
+      if (self%is_time_open) then
+         call self%cm1log(LOG_WARN, 'open_dataset_time', 'Internal Error: timelevel inconsistency')
+         stop
       end if
 
       500 format(I5.5)
@@ -497,121 +489,118 @@ contains
 
       datfile = trim(self%path)//'/'//trim(self%basename)//'.'//dtime//'.h5'
 
-      call self%cm1log(LOG_MSG, 'read3DMultStart', 'Opening for Multiread: '//trim(datfile))
+      call self%cm1log(LOG_MSG, 'open_dataset_time', 'Opening for Multiread: '//trim(datfile))
       call h5fopen_f(datfile, H5F_ACC_RDONLY_F, self%file_id, self%h5err)
 
-      self%ismult = .true.
-      readMultStart = 1
+      self%time_open = time
+      self%is_time_open = .true.
+      open_dataset_time = 1
 
-   end function readMultStart_hdf5
+    end function open_dataset_time_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function readMultStop_hdf5(self) result(readMultStop)
+   integer function close_dataset_time_hdf5(self) result(close_dataset_time)
       implicit none
       class(cm1_hdf5) :: self
 
-      if ((.not. self%check_open('readMultStop')) .or. (.not. self%check_mult('readMultStop'))) then
-         readMultStop = 0
-         return
-      end if
+      close_dataset_time = 0
+      if ((.not. self%check_dataset_open('close_dataset_time')) .or. &
+           (.not. self%check_time_open('close_dataset_time'))) return
 
       call h5fclose_f(self%file_id, self%h5err)
-      call self%cm1log(LOG_MSG, 'read3DMultStop', 'Closed file for Multiread')
+      call self%cm1log(LOG_MSG, 'close_dataset_time', 'Timelevel closed for reading')
 
-      self%ismult = .false.
-      readMultStop = 1
+      self%time_open = -1
+      self%is_time_open = .false.
+      close_dataset_time = 1
 
-   end function readMultStop_hdf5
+    end function close_dataset_time_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    integer function getVarByName_hdf5(self,varname) result(getVarByName)
+!TODO: rename this to get_var_dims ?
+    integer function get_var_byname_hdf5(self,varname) result(get_var_byname)
        implicit none
        class(cm1_hdf5)                   :: self
        character(len=*), intent(in) :: varname
        integer :: i
- 
-       if (.not. self%check_open('getVarByName')) then
-          getVarByName = 0
-          return
-       end if
+
+       get_var_byname = 0
+       if (.not. self%check_dataset_open('get_var_byname')) return
  
        do i = 1, self%nv
           if (varname.eq.self%vars(i)%varname) then
-             getVarByName = self%vars(i)%dims
+             get_var_byname = self%vars(i)%dims
              return
           endif
        end do
  
-       getVarByName = 0
+       call self%cm1log(LOG_WARN, 'get_var_byname', 'Requested variable does not exist: '//varname)
  
-    end function getVarByName_hdf5
+     end function get_var_byname_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read2DMult_hdf5(self, varname, Field2D) result(read2DMult)
+   integer function read2D_at_time_hdf5(self, varname, Field2D) result(read2D_at_time)
       implicit none
       class(cm1_hdf5) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny) :: Field2D
       integer :: varid
 
-      if ((.not. self%check_open('read2DMult')) .or. (.not. self%check_mult('read2DMult'))) then
-         read2DMult = 0
-         return
-      end if
+      read2D_at_time = 0
+      if ((.not. self%check_dataset_open('read2D_at_time')) .or. &
+           (.not. self%check_time_open('read2D_at_time'))) return
 
       ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
+      varid = self%get_var_byname(varname)
       if (varid.ne.2) then
-         call self%cm1log(LOG_WARN, 'read2DMult', 'Variable not found: '//trim(varname))
-         read2DMult = 0
+         call self%cm1log(LOG_WARN, 'read2D_at_time', 'Variable not found: '//trim(varname))
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read2DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read2D_at_time', 'Reading: '//trim(varname))
       call get_h5_2d_float(self%file_id, '/2d/'//trim(varname), self%h5err, Field2D, self%nx, self%ny)
 
-      read2DMult = 1
+      read2D_at_time = 1
 
-   end function read2DMult_hdf5
+    end function read2D_at_time_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read3DMult_hdf5(self, varname, Field3D) result(read3DMult)
+   integer function read3D_at_time_hdf5(self, varname, Field3D) result(read3D_at_time)
       implicit none
       class(cm1_hdf5) :: self
       character(len=*), intent(in) :: varname
       real, dimension(self%nx,self%ny,self%nz) :: Field3D
       integer :: varid
 
+      read3D_at_time = 0
       ! Is the dataset open (has the ctl file been scanned)
       ! Is the dataset open for reading (is the dat file open)
-      if ((.not. self%check_open('read3DMult')) .or. (.not. self%check_mult('read3DMult'))) then
-         read3DMult = 0
-         return
-      end if
+      if ((.not. self%check_dataset_open('read3D_at_time')) .or. &
+           (.not. self%check_time_open('read3D_at_time'))) return
 
       ! Does the variable exist in this dataset?
-      varid = self%getVarByName(varname)
+      varid = self%get_var_byname(varname)
       if (varid.ne.3) then
-         call self%cm1log(LOG_WARN, 'read3DMult', 'Variable not found: '//trim(varname))
+         call self%cm1log(LOG_WARN, 'read3D_at_time', 'Variable not found: '//trim(varname))
          ! lets see if this variable can be reconstructed before giving up.
-         read3DMult = self%read3DDerived(varname, Field3D)
+         read3D_at_time = self%read3D_derived(varname, Field3D)
          return
       end if
 
-      call self%cm1log(LOG_INFO, 'read3DMult', 'Reading: '//trim(varname))
+      call self%cm1log(LOG_INFO, 'read3D_at_time', 'Reading: '//trim(varname))
       call get_h5_3d_float(self%file_id, '/3d_'//self%grid//'/'//trim(varname), self%h5err, Field3D, self%nx, self%ny, self%nz)
 
-      read3DMult = 1
+      read3D_at_time = 1
 
-   end function read3DMult_hdf5
+    end function read3D_at_time_hdf5
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function read3DDerived(self, varname, Field3D) result(read3D)
+   integer function read3D_derived(self, varname, Field3D) result(read3D)
      implicit none
      class(cm1_hdf5) :: self
      character(len=*), intent(in) :: varname
@@ -622,12 +611,11 @@ contains
      real, dimension(self%nz) :: Field0
      integer :: k
 
+     read3D = 0
      ! Is the dataset open (has the ctl file been scanned)
      ! Is the dataset open for reading (is the dat file open)
-     if ((.not. self%check_open('read3DDerived')) .or. (.not. self%check_mult('read3DDerived'))) then
-        read3D = 0
-        return
-     end if
+     if ((.not. self%check_dataset_open('read3DDerived')) .or. &
+          (.not. self%check_time_open('read3DDerived'))) return
 
      ! This function reads a basestate variable and a perturbation variable to
      ! return the requested variable.  e.g. p = p_0 + p', read p_0 and p' to 
@@ -641,8 +629,8 @@ contains
      if (varname0 .eq. 'rho0') varname0 = 'rh0'
 
      ! Verify variables exist. Returns 0 for non-existance or the number of dimensions if found
-     varid0 = self%getVarByName(varname0)
-     varid = self%getVarByName(varname_pert)
+     varid0 = self%get_var_byname(varname0)
+     varid = self%get_var_byname(varname_pert)
      if (varid0.ne.1) then ! we are expecting a 1-D variable
         call self%cm1log(LOG_WARN, 'read3DDerived', 'Variable not found: '//trim(varname0))
         read3D = 0
@@ -670,7 +658,7 @@ contains
 
      read3D = 1
 
-   end function read3DDerived
+   end function read3D_derived
 
 end module ingest_cm1_hdf5
 #endif

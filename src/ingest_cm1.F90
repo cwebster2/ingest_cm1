@@ -59,10 +59,8 @@ module ingest_cm1
       private
       class(cm1_base), allocatable, dimension(:) :: cm1
       character, allocatable, dimension(:)       :: grids
-      integer,   allocatable, dimension(:)       :: multtime
       integer                       :: ngrids, dsettype
       logical :: isopen = .false.
-      logical, allocatable, dimension(:) :: ismult
 
       contains
          private
@@ -111,10 +109,6 @@ contains
       self%dsettype = dsettype
       self%ngrids = size(grids)
       self%grids = grids
-      allocate(self%ismult(self%ngrids))
-      allocate(self%multtime(self%ngrids))
-      self%ismult = .false.
-      self%multtime = -1
       self%isopen = .false.
       open_dataset = 0
 
@@ -183,8 +177,6 @@ contains
 #endif
 
       deallocate(self%grids)
-      deallocate(self%ismult)
-      deallocate(self%multtime)
       deallocate(self%cm1)
 
       self%isopen = .false.
@@ -249,22 +241,7 @@ contains
       gridno = self%check_valid('read_3d', grid)
       if (gridno .eq. -1) return
 
-      if (self%ismult(gridno)) then
-         if (time .ne. self%multtime(gridno)) then
-            ! Multiread is running for wrong time.  Stop and restart it
-            read_3d = self%cm1(gridno)%readMultStop()
-            read_3d = self%cm1(gridno)%readMultStart(time)
-            self%multtime(gridno) = time
-         end if
-      else
-         ! Start Multiread
-         self%ismult(gridno) = .true.
-         read_3d = self%cm1(gridno)%readMultStart(time)
-         self%multtime(gridno) = time
-      end if
-
-      ! Do read here
-      read_3d = self%cm1(gridno)%read3DMult(varname, Field3D)
+      read_3d = self%cm1(gridno)%read3D(varname, time, Field3D)
       
    end function read_3d
 
@@ -283,12 +260,6 @@ contains
       gridno = self%check_valid('read_3d', grid)
       if (gridno .eq. -1) return
 
-      if (self%ismult(gridno)) then
-         ! stop multiread if in progress for the next call
-         read_3d_slice = self%cm1(gridno)%readMultStop()
-      end if
-
-      ! Do read here
       read_3d_slice = self%cm1(gridno)%read3DSlice(varname, time, Field3D, ib, ie, jb, je, kb, ke)
       
    end function read_3d_slice
@@ -308,22 +279,7 @@ contains
       gridno = self%check_valid('read_2d', grid)
       if (gridno .eq. -1) return
 
-      if (self%ismult(gridno)) then
-         if (time .ne. self%multtime(gridno)) then
-            ! Multiread is running for wrong time.  Stop and restart it
-            read_2d = self%cm1(gridno)%readMultStop()
-            read_2d = self%cm1(gridno)%readMultStart(time)
-            self%multtime(gridno) = time
-         end if
-      else
-         ! Start Multiread
-         self%ismult(gridno) = .true.
-         read_2d = self%cm1(gridno)%readMultStart(time)
-         self%multtime(gridno) = time
-      end if
-
-      ! Do read here
-      read_2d = self%cm1(gridno)%read2DMult(varname, Field2D)
+      read_2d = self%cm1(gridno)%read2D(varname, time, Field2D)
 
    end function read_2d
 
@@ -340,7 +296,7 @@ contains
       gridno = self%check_valid('get_nx', grid)
       if (gridno .eq. -1) return
 
-      get_nx = self%cm1(gridno)%cm1_nx()
+      get_nx = self%cm1(gridno)%get_nx()
       
    end function get_nx
 
@@ -357,7 +313,7 @@ contains
       gridno = self%check_valid('get_ny', grid)
       if (gridno .eq. -1) return
 
-      get_ny = self%cm1(gridno)%cm1_ny()
+      get_ny = self%cm1(gridno)%get_ny()
       
    end function get_ny
 
@@ -374,7 +330,7 @@ contains
       gridno = self%check_valid('get_nz', grid)
       if (gridno .eq. -1) return
 
-      get_nz = self%cm1(gridno)%cm1_nz()
+      get_nz = self%cm1(gridno)%get_nz()
       
    end function get_nz
 
@@ -391,7 +347,7 @@ contains
       gridno = self%check_valid('get_nz', grid)
       if (gridno .eq. -1) return
 
-      get_nt = self%cm1(gridno)%cm1_nt()
+      get_nt = self%cm1(gridno)%get_nt()
       
    end function get_nt
 
@@ -409,7 +365,7 @@ contains
       gridno = self%check_valid('get_x', grid)
       if (gridno .eq. -1) return
       
-      get_x = self%cm1(gridno)%cm1_x(x)
+      get_x = self%cm1(gridno)%get_x(x)
 
    end function get_x
 
@@ -427,7 +383,7 @@ contains
       gridno = self%check_valid('get_y', grid)
       if (gridno .eq. -1) return
       
-      get_y = self%cm1(gridno)%cm1_y(y)
+      get_y = self%cm1(gridno)%get_y(y)
 
    end function get_y
 
@@ -445,7 +401,7 @@ contains
       gridno = self%check_valid('get_z', grid)
       if (gridno .eq. -1) return
       
-      get_z = self%cm1(gridno)%cm1_z(z)
+      get_z = self%cm1(gridno)%get_z(z)
 
    end function get_z
 
@@ -463,7 +419,7 @@ contains
       gridno = self%check_valid('get_z', grid)
       if (gridno .eq. -1) return
       
-      get_t = self%cm1(gridno)%cm1_t(t)
+      get_t = self%cm1(gridno)%get_t(t)
 
    end function get_t
 
@@ -481,7 +437,7 @@ contains
       gridno = self%check_valid('get_var_exists', grid)
       if (gridno .eq. -1) return
 
-      varid = self%cm1(gridno)%getVarByName(varname)
+      varid = self%cm1(gridno)%get_var_byname(varname)
       if (varid .eq. 0) return
 
       get_var_exists = .true.

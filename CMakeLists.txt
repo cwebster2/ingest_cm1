@@ -61,3 +61,14 @@ add_subdirectory(bin)
 message ("Installation prefix:       ${CMAKE_INSTALL_PREFIX}")
 message ("Library installation path: ${CMAKE_INSTALL_PREFIX}/lib")
 message ("Module file install path:  ${CMAKE_INSTALL_PREFIX}/include")
+
+add_custom_target(clean-cmake-files
+  COMMAND ${CMAKE_COMMAND} -P clean-all.cmake
+  )
+
+
+
+add_custom_target(clean-all
+  COMMAND ${CMAKE_BUILD_TOOL} clean
+  COMMNAD ${CMAKE_COMMAND} -P clean-all.cmake
+  )

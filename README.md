@@ -185,12 +185,13 @@ These get dimensions of the specified grid `grid`.
 #### get_x, get_y, get_z, get_t ####
 
 ```fortran
-integer function get_x(self, grid, x)
+function get_x(self, grid, cm1err) result(x)
    implicit none
    class(cm1_dataset) :: self
    character          :: grid
    integer            :: gridno
-   real, dimension(:) :: x
+   logical, optional  :: cm1err
+   real, dimension(:), allocatable :: x
 ```
 These get the mesh of grid `grid` along the specified dimension
 

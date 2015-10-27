@@ -38,7 +38,7 @@ Future output format support is expected for NetCDF4 and native MPI tiled HDF ou
     + [Reading data](#reading-data)
       * [read_3d](#read_3d)
       * [read_3d_slice](#read_3d_slice)
-      * [read_2d](#read_32d)
+      * [read_2d](#read_2d)
     + [Accessing grid information](#accessing-grid-information)
   - [Example](#example)
   - [The backend classes](#the-backend-classes)
@@ -231,7 +231,8 @@ derived type and the base type for details.
 # Contributing
 The easiest way to contribute is to fork the repository on github and submit
 pull requests.  I'm open to all contributions from bugfixes to enhacements specific
-to your workflow use-case.  
+to your workflow use-case.  Contributed code is licensed under the BSD license and
+you will attributed.
 
 # Author
 Contributors as of 26 Oct 2015

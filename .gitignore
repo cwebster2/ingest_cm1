@@ -5,3 +5,9 @@ src/test_cm1_hdf
 *.mod
 *.a
 *.swp
+*.so*
+TAGS
+CMakeFiles
+Makefile
+CMakeCache.txt
+cmake_install.cmake

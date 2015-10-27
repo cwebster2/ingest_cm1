@@ -24,8 +24,8 @@ if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   -pedantic -fsanitize=undefined -fsanitize=address -fsanitize=leak -fcheck=all")
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)
-  set (CMAKE_Fortran_FLAGS_RELEASE "-stand f08 -xhost -O2")
-  set (CMAKE_Fortran_FLAGS_DEBUG   "-stand f08 -O0 -g")
+  set (CMAKE_Fortran_FLAGS_RELEASE "-stand f08 -xhost -O2 -assume realloc_lhs")
+  set (CMAKE_Fortran_FLAGS_DEBUG   "-stand f08 -O0 -g -assume realloc_lhs")
 else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
   # default
   message ("CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
@@ -49,8 +49,6 @@ if (WITH_HDF5_CMAKE)
   include_directories(${HDF5_INCLUDE_DIR})
   set (LINK_LIBS ${LINK_LIBS} ${HDF5_LIBRARIES})
 endif (WITH_HDF5_CMAKE)
-
-
 
 add_subdirectory(src)
 add_subdirectory(bin)

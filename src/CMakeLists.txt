@@ -4,8 +4,8 @@ add_library(ingest_cm1 ${SOURCES})
 
 set_target_properties(ingest_cm1
   PROPERTIES
-  VERSION 0.9.0
-  SOVERSION 0)
+  VERSION 1.0.0
+  SOVERSION 1)
 
 target_link_libraries(ingest_cm1 ${LINK_LIBS})
 

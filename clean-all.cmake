@@ -1,4 +1,3 @@
-// clean-all.cmake
 set(cmake_generated ${CMAKE_BINARY_DIR}/CMakeCache.txt
   ${CMAKE_BINARY_DIR}/cmake_install.cmake
   ${CMAKE_BINARY_DIR}/Makefile

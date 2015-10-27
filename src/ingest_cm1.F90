@@ -90,6 +90,16 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !> Opens a CM1 output dataset for reading.
+  !! @param dsetpath The path to the CM1 dataset
+  !! @param dsetbasename The basename of the CM1 dataset (e.g. cm1out)
+  !! @param dsettype The dataset type
+  !! @see enum
+  !! @param grids An array of dataset grids to load (e.g. ['u', 'v', 'w', 's'])
+  !! @param nodex Number of MPI nodes in the x direction for the dataset
+  !! @param nodey Number of MPI nodes in the y direction for the dataset
+  !! @return 1 on sucess, 0 on failure to open the dataset
+  
    integer function open_dataset(self, dsetpath, dsetbasename, dsettype, grids, nodex, nodey)
       class(cm1_dataset) :: self
       character(len=*), intent(in) :: dsetpath

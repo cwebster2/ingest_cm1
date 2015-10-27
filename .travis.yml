@@ -4,8 +4,6 @@ env:
   global:
     - HDF_ROOT="/usr"
   matrix: 
-      - FC=gfortran-4.8 CC=gcc-4.8
-      - FC=gfortran-4.9 CC=gcc-4.9
       - FC=gfortran-5 CC=gcc-5          
 
 addons:
@@ -14,10 +12,6 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - cmake
-      - gcc-4.8
-      - gfortran-4.8
-      - gcc-4.9
-      - gfortran-4.9
       - gcc-5
       - gfortran-5
       - libhdf5-openmpi-dev

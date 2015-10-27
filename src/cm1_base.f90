@@ -346,58 +346,62 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_x(self, cm1x)
+   function get_x(self, cm1err) result(cm1x)
       implicit none
       class(cm1_base), intent(in) :: self
+      logical, optional :: cm1err
       real, dimension(self%nx) :: cm1x
 
-      get_x = 0
+      if (present(cm1err)) cm1err = .true.
       if (.not. self%check_dataset_open('get_x')) return
 
       cm1x(:) = self%x(:)
-      get_x = 1
+      if (present(cm1err)) cm1err = .false.
    end function get_x
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_y(self, cm1y)
+   function get_y(self, cm1err) result(cm1y)
       implicit none
       class(cm1_base), intent(in) :: self
+      logical, optional :: cm1err
       real, dimension(self%ny) :: cm1y
 
-      get_y = 0
+      if (present(cm1err)) cm1err = .true.
       if (.not. self%check_dataset_open('get_y')) return
 
       cm1y(:) = self%y(:)
-      get_y = 1
-   end function get_y
+      if (present(cm1err)) cm1err = .false.
+    end function get_y
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_z(self, cm1z)
+   function get_z(self, cm1err) result(cm1z)
       implicit none
       class(cm1_base), intent(in) :: self
+      logical, optional :: cm1err
       real, dimension(self%nz) :: cm1z
 
-      get_z = 0
+      if (present(cm1err)) cm1err = .true.
       if (.not. self%check_dataset_open('get_z')) return
 
       cm1z(:) = self%z(:)
-      get_z = 1
-   end function get_z
+      if (present(cm1err)) cm1err = .false.
+    end function get_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_t(self, cm1t)
+   function get_t(self, cm1err) result(cm1t)
       implicit none
       class(cm1_base), intent(in) :: self
+      logical, optional :: cm1err
       real, dimension(self%nt) :: cm1t
 
-      get_t = 0 
+      if (present(cm1err)) cm1err = .true.
       if (.not. self%check_dataset_open('get_x')) return
 
       cm1t(:) = self%times(:)
-      get_t = 1
+      if (present(cm1err)) cm1err = .false.
    end function get_t
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

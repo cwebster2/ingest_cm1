@@ -353,74 +353,78 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_x(self, grid, x)
+   function get_x(self, grid, cm1err) result(x)
       implicit none
-      class(cm1_dataset) :: self
-      character          :: grid
-      integer            :: gridno
-      real, dimension(:) :: x
+      class(cm1_dataset)       :: self
+      character                :: grid
+      integer                  :: gridno
+      logical, optional        :: cm1err
+      real, allocatable, dimension(:) :: x
 
-      get_x = 0
-
+      if (present(cm1err)) cm1err = .true.
+      
       gridno = self%check_valid('get_x', grid)
       if (gridno .eq. -1) return
       
-      get_x = self%cm1(gridno)%get_x(x)
-
+      x = self%cm1(gridno)%get_x(cm1err)
+      if (present(cm1err)) cm1err = .false.
    end function get_x
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_y(self, grid, y)
+   function get_y(self, grid, cm1err) result(y)
       implicit none
       class(cm1_dataset) :: self
       character          :: grid
       integer            :: gridno
-      real, dimension(:) :: y
+      logical, optional  :: cm1err
+      real, allocatable, dimension(:) :: y
 
-      get_y = 0
-
+      if (present(cm1err)) cm1err = .true.
+      
       gridno = self%check_valid('get_y', grid)
       if (gridno .eq. -1) return
       
-      get_y = self%cm1(gridno)%get_y(y)
-
+      y = self%cm1(gridno)%get_y(cm1err)
+      if (present(cm1err)) cm1err = .false.
    end function get_y
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_z(self, grid, z)
+   function get_z(self, grid, cm1err) result(z)
       implicit none
       class(cm1_dataset) :: self
       character          :: grid
       integer            :: gridno
-      real, dimension(:) :: z
+      logical, optional  :: cm1err
+      real, allocatable, dimension(:) :: z
 
-      get_z = 0
-
+      if (present(cm1err)) cm1err = .true.
+      
       gridno = self%check_valid('get_z', grid)
       if (gridno .eq. -1) return
       
-      get_z = self%cm1(gridno)%get_z(z)
-
+      z = self%cm1(gridno)%get_z(cm1err)
+      if (present(cm1err)) cm1err = .false.
    end function get_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   integer function get_t(self, grid, t)
+   function get_t(self, grid, cm1err) result(t)
       implicit none
       class(cm1_dataset) :: self
       character          :: grid
       integer            :: gridno
-      real, dimension(:) :: t
+      logical, optional  :: cm1err
+      real, allocatable, dimension(:) :: t
 
-      get_t = 0
-
+      if (present(cm1err)) cm1err = .true.
+      
       gridno = self%check_valid('get_z', grid)
       if (gridno .eq. -1) return
       
-      get_t = self%cm1(gridno)%get_t(t)
-
+      t= self%cm1(gridno)%get_t(cm1err)
+      if (present(cm1err)) cm1err = .false.
    end function get_t
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

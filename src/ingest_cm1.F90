@@ -377,7 +377,6 @@ contains
       if (gridno .eq. -1) return
       
       x = self%cm1(gridno)%get_x(cm1err)
-      if (present(cm1err)) cm1err = .false.
    end function get_x
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -396,7 +395,6 @@ contains
       if (gridno .eq. -1) return
       
       y = self%cm1(gridno)%get_y(cm1err)
-      if (present(cm1err)) cm1err = .false.
    end function get_y
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -415,7 +413,6 @@ contains
       if (gridno .eq. -1) return
       
       z = self%cm1(gridno)%get_z(cm1err)
-      if (present(cm1err)) cm1err = .false.
    end function get_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -434,7 +431,6 @@ contains
       if (gridno .eq. -1) return
       
       t= self%cm1(gridno)%get_t(cm1err)
-      if (present(cm1err)) cm1err = .false.
    end function get_t
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

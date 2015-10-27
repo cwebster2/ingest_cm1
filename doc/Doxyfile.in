@@ -14,30 +14,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 
-# This tag specifies the encoding used for all characters in the config file
-# that follow. The default is UTF-8 which is also the encoding used for all
-# text before the first occurrence of this tag. Doxygen uses libiconv (or the
-# iconv built into libc) for the transcoding. See
-# http://www.gnu.org/software/libiconv for the list of possible encodings.
-
 DOXYFILE_ENCODING      = UTF-8
-
-# The PROJECT_NAME tag is a single word (or sequence of words) that should
-# identify the project. Note that if you do not use Doxywizard you need
-# to put quotes around the project name if it contains spaces.
-
 PROJECT_NAME           = "@CMAKE_PROJECT_NAME@"
-
-# The PROJECT_NUMBER tag can be used to enter a project or revision number.
-# This could be handy for archiving the generated documentation or
-# if some version control system is used.
-
 PROJECT_NUMBER         = 1.0
-
-# Using the PROJECT_BRIEF tag one can provide an optional one line description
-# for a project that appears at the top of each page and should give viewer
-# a quick idea about the purpose of the project. Keep the description short.
-
 PROJECT_BRIEF          = "A Fortran library for reading CM1 output datasets"
 
 # With the PROJECT_LOGO tag one can specify an logo or icon that is
@@ -52,7 +31,7 @@ PROJECT_LOGO           =
 # If a relative path is entered, it will be relative to the location
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = .
+OUTPUT_DIRECTORY       = 
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create
 # 4096 sub-directories (in 2 levels) under the output directory of each output
@@ -119,7 +98,7 @@ INLINE_INHERITED_MEMB  = NO
 # path before files name in the file list and in the header files. If set
 # to NO the shortest path that makes the file name unique will be used.
 
-FULL_PATH_NAMES        = NO
+FULL_PATH_NAMES        = YES
 
 # If the FULL_PATH_NAMES tag is set to YES then the STRIP_FROM_PATH tag
 # can be used to strip a user-defined part of the path. Stripping is

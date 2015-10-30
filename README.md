@@ -1,7 +1,7 @@
 # Ingest_cm1 #
 
 [![Build Status](https://travis-ci.org/cwebster2/ingest_cm1.svg?branch=master)](https://travis-ci.org/cwebster2/ingest_cm1)
-
+[![DOI](https://zenodo.org/badge/3899/cwebster2/ingest_cm1.svg)](https://zenodo.org/badge/latestdoi/3899/cwebster2/ingest_cm1)
 
 
 ## README ##

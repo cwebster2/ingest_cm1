@@ -1,41 +1,38 @@
-!==========================================================================
-!
-!   Ingest_CM1
-!
-!   Casey Webster, Dept of Meteorology, Penn State
-!   <ccw5079 at psu dot edu>
-!
-!   DESCRIPTION:
-!    A Fortran 2003 module to access model output by the CM1 cloud model
-!    by George Bryan.
-!
-!    Formats supported :
-!       * grads style flat files
-!         * multi file per time step (MPI)
-!         * single file per time step
-!
-!                        Requirement: T dimension values must conincide
-!                                     with filenames.
-!
-!    Future formats:
-!      * grads style flat files
-!        * all timesteps in one file
-!      * netcdf
-!      * native cm1hdf5 cdir output
-!
-!    TODO: for HDF support:
-!     derived types (if no qvpert, use qv-q00 from basestate)
-!
-!   Copyright (C) 2014 Casey Webster - All Rights Reserved
-!   You may use, distribute and modiy this code under the
-!   terms of the BSD (3-clause) license.
-!
-!   You should have received a copy of the BSD (3-clause)
-!   license with this file.  If not, please visit :
-!   http://opensource.org/licenses/BSD-3-Clause or 
-!   https://github.com/cwebster2/ingest_cm1/blob/master/LICENSE
-!
-!==========================================================================!
+!>==========================================================================
+!!
+!!   Ingest_CM1
+!!
+!!   Casey Webster, Dept of Meteorology, Penn State
+!!   <ccw5079 at psu dot edu>
+!!
+!!   DESCRIPTION:
+!!    A Fortran 2003 module to access model output by the CM1 cloud model
+!!    by George Bryan.
+!!
+!!    Formats supported :
+!!       * grads style flat files
+!!         * all timesteps in one file
+!!         * multi file per time step (MPI)
+!!         * single file per time step
+!!
+!!                        Requirement: T dimension values must conincide
+!!                                     with filenames.
+!!
+!!    Formats not yet supported:
+!!      * netcdf
+!!      * native cm1hdf5 cdir output
+!!
+!!
+!!   Copyright (C) 2014 Casey Webster - All Rights Reserved
+!!   You may use, distribute and modiy this code under the
+!!   terms of the BSD (3-clause) license.
+!!
+!!   You should have received a copy of the BSD (3-clause)
+!!   license with this file.  If not, please visit :
+!!   http://opensource.org/licenses/BSD-3-Clause or 
+!!   https://github.com/cwebster2/ingest_cm1/blob/master/LICENSE
+!!
+!!==========================================================================!
 
 module ingest_cm1
 
@@ -70,7 +67,8 @@ module ingest_cm1
          procedure, public, pass(self) :: read_3d
          procedure, public, pass(self) :: read_3d_slice
          procedure, public, pass(self) :: read_2d
-
+         generic :: read => read_3d, read_3d_slice, read_2d
+         
          procedure, public, pass(self) :: open_dataset
          procedure, public, pass(self) :: close_dataset
 

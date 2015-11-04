@@ -129,12 +129,12 @@ This closes the dataset.
 
 ### Reading data ###
 
-There are three procedures to read data from an open dataset, `read_2d`, `read_3d` and `read_3d_slice`.
+There are three versions of `read` that return 2d, 3d and slices of 3d fields.
 
 #### read_3d
 
 ```fortran
-integer function read_3d(self, time, grid, varname, Field3D)
+integer function read(self, time, grid, varname, Field3D)
    implicit none
    class(cm1_dataset) :: self
    integer            :: time, gridno
@@ -147,7 +147,7 @@ This function returns the 3d variable `Field3D` for the variable `varname` on gr
 #### read_3d_slice
 
 ```fortran
-integer function read_3d_slize(self, time, grid, varname, Field3D, ib, ie, jb, je, kb, ke)
+integer function read(self, time, grid, varname, Field3D, ib, ie, jb, je, kb, ke)
    implicit none
    class(cm1_dataset) :: self
    integer            :: time, gridno, ib, ie, jb, je, kb, ke
@@ -161,7 +161,7 @@ This function works just as `read_3d` but returns a slice of the full variable. 
 #### read_2d
 
 ```fortran
-integer function read_2d(self, time, grid, varname, Field2D)
+integer function read(self, time, grid, varname, Field2D)
    implicit none
    class(cm1_dataset) :: self
    integer            :: time, gridno
